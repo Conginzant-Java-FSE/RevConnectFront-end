@@ -1,0 +1,57 @@
+<div *ngIf="loading" style="text-align: center; margin-top: 40px; color: var(--text-secondary);">
+    Loading Explore Feed...
+</div>
+
+<div *ngIf="error" style="text-align: center; margin-top: 40px; color: var(--accent-red);">
+    {{ error }}
+</div>
+
+<section class="explore-shell" *ngIf="!loading && !error">
+    <header class="explore-top">
+        <h2 class="explore-title">Explore</h2>
+        <p class="explore-copy">
+            Creator posts, business posts, and public user posts
+        </p>
+    </header>
+
+    <div class="explore-grid" *ngIf="posts.length > 0; else noPosts">
+        <article
+            *ngFor="let post of posts; trackBy: trackByPost"
+            class="explore-tile animate-fade-in"
+            (click)="goToProfile(post.authorUsername)"
+            [attr.aria-label]="'Open ' + post.authorUsername + ' profile'"
+        >
+            <img
+                *ngIf="!isVideoPost(post)"
+                [src]="post.mediaUrl"
+                [alt]="post.authorUsername + ' post'"
+                class="explore-media"
+                loading="lazy"
+            />
+
+            <video
+                *ngIf="isVideoPost(post)"
+                #exploreVideo
+                [src]="post.mediaUrl"
+                class="explore-media"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+            ></video>
+
+            <div class="tile-gradient"></div>
+            <div class="tile-meta">
+                <span class="tile-user">{{ post.authorUsername }}</span>
+                <span class="tile-type">{{ isVideoPost(post) ? 'VIDEO' : 'PHOTO' }}</span>
+            </div>
+        </article>
+    </div>
+
+    <ng-template #noPosts>
+        <div class="empty-state">
+            <div class="empty-icon">...</div>
+            <div>No explore posts found right now.</div>
+        </div>
+    </ng-template>
+</section>

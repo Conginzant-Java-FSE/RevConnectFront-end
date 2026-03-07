@@ -1,0 +1,45 @@
+<div class="auth-container">
+    <div class="glass-panel auth-panel">
+        <h1 class="auth-logo logo-gradient-text">RevConnect</h1>
+        <p class="auth-subtitle">Welcome back. Enter your details.</p>
+
+        <div *ngIf="error" style="color: #ef4444; margin-bottom: 16px; font-size: 14px;">
+            {{ error }}
+        </div>
+
+        <button
+            *ngIf="showReactivateAction"
+            type="button"
+            class="reactivate-btn"
+            (click)="handleReactivateAccount()"
+            [disabled]="reactivating || loading">
+            {{ reactivating ? 'Reactivating...' : 'Reactivate Account' }}
+        </button>
+
+        <form (ngSubmit)="handleLogin($event)" class="auth-form">
+            <input type="text" name="username" placeholder="Username or Email" class="auth-input" [(ngModel)]="username"
+                required />
+            <div class="password-wrap">
+                <input [type]="showPassword ? 'text' : 'password'" name="password" placeholder="Password" class="auth-input" [(ngModel)]="password"
+                    required />
+                <button type="button" class="password-toggle" (click)="showPassword = !showPassword">
+                    {{ showPassword ? '??' : '??' }}
+                </button>
+            </div>
+            <div style="text-align: right; margin-top: -6px;">
+                <a routerLink="/forgot-password" class="auth-link" style="font-size: 13px;">Forgot password?</a>
+            </div>
+            <button type="submit" class="auth-btn" [disabled]="loading">
+                {{ loading ? 'Logging in...' : 'Log In' }}
+            </button>
+        </form>
+
+        <div class="auth-divider">
+            <span>OR</span>
+        </div>
+
+        <div class="auth-footer">
+            <p>Don't have an account? <a routerLink="/register" class="auth-link">Sign up</a></p>
+        </div>
+    </div>
+</div>

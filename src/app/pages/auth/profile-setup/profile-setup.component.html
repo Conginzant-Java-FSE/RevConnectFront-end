@@ -1,0 +1,50 @@
+<div class="auth-container">
+    <div class="glass-panel auth-panel">
+        <h1 class="auth-logo logo-gradient-text">RevConnect</h1>
+        <p class="auth-subtitle">Welcome! Please complete your profile to continue.</p>
+
+        <div *ngIf="error" style="color: #ef4444; margin-bottom: 16px; font-size: 14px;">
+            {{ error }}
+        </div>
+
+        <form (ngSubmit)="handleSubmit($event)" class="auth-form" *ngIf="user">
+
+            <ng-container *ngIf="role == 'USER' || role == 'General User' || !role || role == ''">
+                <input type="text" name="fullName" placeholder="Full Name" class="auth-input"
+                    [(ngModel)]="formData.fullName" required />
+                <input type="text" name="location" placeholder="Location" class="auth-input"
+                    [(ngModel)]="formData.location" />
+                <textarea name="bio" placeholder="Bio" class="auth-input" [(ngModel)]="formData.bio" rows="3"
+                    style="resize: none;"></textarea>
+            </ng-container>
+
+            <ng-container *ngIf="role == 'CREATER'">
+                <input type="text" name="displayName" placeholder="Display Name" class="auth-input"
+                    [(ngModel)]="formData.displayName" required />
+                <input type="text" name="niche" placeholder="Your Niche (e.g., Gaming, Tech)" class="auth-input"
+                    [(ngModel)]="formData.niche" required />
+                <input type="text" name="creatorCategoryLabel" placeholder="Creator Category (e.g., Artist)" class="auth-input"
+                    [(ngModel)]="formData.creatorCategoryLabel" />
+                <textarea name="creatorLinks" placeholder="Link in bio URLs (one per line)" class="auth-input"
+                    [(ngModel)]="formData.creatorLinks" rows="3" style="resize: none;"></textarea>
+                <textarea name="bio" placeholder="Creator Bio" class="auth-input" [(ngModel)]="formData.bio" rows="3"
+                    style="resize: none;" required></textarea>
+            </ng-container>
+
+            <ng-container *ngIf="role == 'Business_Account_User'">
+                <input type="text" name="businessName" placeholder="Business Name" class="auth-input"
+                    [(ngModel)]="formData.businessName" required />
+                <input type="email" name="contactEmail" placeholder="Contact Email" class="auth-input"
+                    [(ngModel)]="formData.contactEmail" required />
+                <input type="text" name="contactPhone" placeholder="Contact Phone" class="auth-input"
+                    [(ngModel)]="formData.contactPhone" required />
+                <textarea name="description" placeholder="Business Description" class="auth-input"
+                    [(ngModel)]="formData.description" rows="3" style="resize: none;" required></textarea>
+            </ng-container>
+
+            <button type="submit" class="auth-btn" [disabled]="loading">
+                {{ loading ? 'Saving...' : 'Complete Setup' }}
+            </button>
+        </form>
+    </div>
+</div>

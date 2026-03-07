@@ -1,0 +1,186 @@
+.sidebar-logo {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 30px;
+    padding-left: 12px;
+}
+.sidebar-logo h1 { font-size: 1.4rem; margin: 0; }
+
+.nav-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: center;
+    padding-right: 2px;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.nav-list::-webkit-scrollbar { width: 4px; }
+.nav-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+}
+
+.nav-item.stacked {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 13px 10px;
+    min-height: 64px;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: background 0.24s, border-color 0.24s, transform 0.24s;
+    border: 1px solid transparent;
+    width: 88px;
+    color: var(--text-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-item.stacked::before {
+    content: "";
+    position: absolute;
+    inset: -40% -60%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 60%);
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.24s, transform 0.24s;
+    pointer-events: none;
+}
+
+.nav-item.stacked:hover {
+    background: var(--bg-hover);
+    border-color: var(--glass-border);
+    color: var(--text-primary);
+    transform: translateX(3px);
+}
+
+.nav-item.stacked:hover::before {
+    opacity: 0.6;
+    transform: scale(1);
+}
+
+.active-stacked {
+    background: linear-gradient(135deg, rgba(184, 48, 80, 0.15), rgba(124, 58, 237, 0.1)) !important;
+    border-color: rgba(184, 48, 80, 0.28) !important;
+    color: var(--text-primary) !important;
+    transform: translateX(4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+.active-stacked .nav-text { color: var(--brand-pink) !important; }
+
+.nav-text {
+    font-size: 11px;
+    font-weight: 500;
+    color: inherit;
+    letter-spacing: 0.2px;
+}
+
+.nav-icon-container {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glowing-svg {
+    width: 100%;
+    height: 100%;
+    opacity: 0.65;
+    transition: opacity 0.24s, transform 0.24s;
+    filter: none !important;
+}
+
+.nav-item.stacked:hover .glowing-svg,
+.active-stacked .glowing-svg { opacity: 1; transform: scale(1.06); }
+
+.analytics-link .nav-icon-container {
+    color: #34d399;
+}
+
+.analytics-link.active-stacked .nav-icon-container,
+.analytics-link:hover .nav-icon-container {
+    color: #5eead4;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    background: var(--brand-pink);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    height: 14px;
+    min-width: 14px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--bg-deep);
+}
+
+.sidebar-footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--glass-border);
+    gap: 2px;
+}
+
+.profile-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 1.5px solid var(--glass-border);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.nav-item.stacked:hover .profile-icon,
+.active-stacked .profile-icon { border-color: var(--brand-pink); }
+
+.notification-shake { animation: none !important; }
+
+@media (max-width: 900px) {
+    .sidebar-logo {
+        justify-content: center;
+        margin-bottom: 16px;
+        padding-left: 0;
+    }
+
+    .sidebar-logo h1 {
+        font-size: 1rem;
+    }
+
+    .nav-item.stacked {
+        width: 78px;
+        padding: 11px 8px;
+        transform: none !important;
+    }
+
+    .nav-text {
+        font-size: 9.5px;
+    }
+
+    .nav-icon-container {
+        width: 20px;
+        height: 20px;
+    }
+}

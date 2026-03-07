@@ -1,0 +1,28 @@
+<section class="subs-shell animate-fade-in">
+  <header class="subs-hero glass-panel">
+    <p class="subs-kicker">Connections</p>
+    <h2>Creator Subscriptions</h2>
+    <p>Creators you are subscribed to for exclusive stories and updates.</p>
+  </header>
+
+  <div class="subs-state" *ngIf="loading">Loading subscriptions...</div>
+  <div class="subs-state error" *ngIf="!loading && error">{{ error }}</div>
+
+  <div class="subs-list" *ngIf="!loading && !error && subscriptions.length > 0">
+    <a
+      class="subs-item glass-panel"
+      *ngFor="let item of subscriptions"
+      [routerLink]="['/profile', item.creatorUsername]"
+    >
+      <div class="subs-main">
+        <strong>&#64;{{ item.creatorUsername }}</strong>
+        <span>Started {{ item.createdAt | date:'mediumDate' }}</span>
+      </div>
+      <span class="subs-open">Open Profile</span>
+    </a>
+  </div>
+
+  <div class="subs-state" *ngIf="!loading && !error && subscriptions.length === 0">
+    You have no creator subscriptions yet.
+  </div>
+</section>

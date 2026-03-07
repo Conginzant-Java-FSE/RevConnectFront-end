@@ -1,0 +1,62 @@
+<div *ngIf="loading" style="color: var(--text-secondary); text-align: center; margin-top: 40px;">
+    Loading Feed...
+</div>
+
+<div *ngIf="error" style="color: var(--accent-red); text-align: center; margin-top: 40px;">
+    {{ error }}
+</div>
+
+<div class="feed-column" *ngIf="!loading && !error">
+    <!-- Stories Section -->
+    <div class="glass-panel" style="padding: 24px; border-radius: var(--border-radius-lg); margin-bottom: 24px;">
+        <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; align-items: center;">
+
+            <!-- Create Story Button -->
+            <div class="story-container add-story-btn-container" (click)="handleOpenStoryCreate()">
+                <div class="add-story-ring">
+                    <img class="story-image"
+                        [src]="user?.userProfile?.profilepicURL || user?.creatorProfile?.profilepicURL || user?.businessProfile?.logoUrl || '/assets/default-avatar.svg'"
+                        alt="Me" />
+                </div>
+                <div class="add-story-plus">+</div>
+                <span class="story-username">Add Story</span>
+            </div>
+
+            <div class="story-container" *ngFor="let bucket of storyUsers" (click)="handleOpenStoryView(bucket)">
+                <div class="story-ring" [class.seen]="bucket.isSeen">
+                    <img class="story-image"
+                        [src]="bucket.userProfilePic || '/assets/default-avatar.svg'"
+                        [alt]="bucket.username" />
+                </div>
+                <span class="story-username">{{ bucket.username }}</span>
+            </div>
+
+            <span *ngIf="stories.length === 0"
+                style="color: var(--text-secondary); font-size: 14px; margin-left: 12px;">
+                Follow friends to see stories!
+            </span>
+        </div>
+    </div>
+
+    <!-- Posts Feed -->
+    <ng-container *ngIf="posts.length > 0; else noPosts">
+        <app-post-card *ngFor="let post of posts" [post]="post"></app-post-card>
+    </ng-container>
+
+    <ng-template #noPosts>
+        <div style="text-align: center; color: var(--text-secondary);">
+            <p>No posts yet. Start following people!</p>
+        </div>
+    </ng-template>
+
+    <app-create-modal
+        [isOpen]="isStoryModalOpen"
+        [mode]="storyModalMode"
+        [defaultCreateSubMode]="storyCreateDefaultSubMode"
+        [activeStory]="activeStoryView"
+        (onClose)="handleStoryModalClose()"
+        (onStoryCreated)="fetchStoriesOnly()"
+        (onViewStoryAdvance)="handleStoryAdvance()"
+        (onViewStoryBack)="handleStoryBack()"
+    ></app-create-modal>
+</div>

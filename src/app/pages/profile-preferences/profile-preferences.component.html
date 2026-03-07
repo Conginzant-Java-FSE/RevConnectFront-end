@@ -1,0 +1,135 @@
+<div class="profile-preferences-container animate-fade-in">
+    <div class="page-head">
+        <div>
+            <h2>Profile Preferences</h2>
+            <p>Manage your personal profile details and creator/business profile setup.</p>
+        </div>
+        <a class="back-btn" [routerLink]="['/profile', user?.username]">Back To Profile</a>
+    </div>
+
+    <div class="preferences-card glass-panel">
+        <ng-container *ngIf="user?.role === 'USER'">
+            <div class="settings-form-group">
+                <label>Full Name</label>
+                <input type="text" class="settings-input" name="fullName" [(ngModel)]="profileData.fullName" />
+            </div>
+            <div class="settings-form-group">
+                <label>Location</label>
+                <input type="text" class="settings-input" name="location" [(ngModel)]="profileData.location" />
+            </div>
+            <div class="settings-form-group">
+                <label>Bio</label>
+                <textarea class="settings-input" name="bio" [(ngModel)]="profileData.bio" rows="3"></textarea>
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="user?.role === 'CREATER'">
+            <div class="settings-form-group">
+                <label>Display Name</label>
+                <input type="text" class="settings-input" name="displayName" [(ngModel)]="profileData.displayName" />
+            </div>
+            <div class="settings-form-group">
+                <label>Niche</label>
+                <input type="text" class="settings-input" name="niche" [(ngModel)]="profileData.niche" />
+            </div>
+            <div class="settings-form-group">
+                <label>Creator Category Label</label>
+                <input type="text" class="settings-input" name="creatorCategoryLabel"
+                    [(ngModel)]="profileData.creatorCategoryLabel" placeholder="Artist, Photographer, Musician..." />
+            </div>
+            <div class="settings-form-group">
+                <label>Profile Grid Layout</label>
+                <select class="settings-input" name="profileGridLayout" [(ngModel)]="profileData.profileGridLayout">
+                    <option value="CLASSIC">Classic Grid</option>
+                    <option value="FEATURED">Featured First Post</option>
+                    <option value="MAGAZINE">Magazine Grid</option>
+                </select>
+            </div>
+            <div class="settings-form-group">
+                <label>Link in Bio (One per line)</label>
+                <textarea class="settings-input" name="creatorLinksInput" [(ngModel)]="creatorLinksInput"
+                    rows="4" placeholder="https://myportfolio.com&#10;https://youtube.com/@channel"></textarea>
+            </div>
+            <div class="settings-form-group">
+                <label>Creator Bio</label>
+                <textarea class="settings-input" name="bio" [(ngModel)]="profileData.bio" rows="3"></textarea>
+            </div>
+
+            <div class="settings-form-group" *ngIf="creatorEligibility">
+                <label>Verified Badge Eligibility</label>
+                <div class="settings-input eligibility-box">
+                    <div><strong>Status:</strong> {{ creatorEligibility.eligible ? 'Eligible' : 'Not eligible yet' }}</div>
+                    <div><strong>Followers:</strong> {{ creatorEligibility.followerCount }} / 100</div>
+                    <div><strong>Posts:</strong> {{ creatorEligibility.postCount }} / 5</div>
+                    <div class="eligibility-note">{{ creatorEligibility.message }}</div>
+                </div>
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="user?.role === 'Business_Account_User'">
+            <div class="settings-form-group">
+                <label>Business Name</label>
+                <input type="text" class="settings-input" name="businessName" [(ngModel)]="profileData.businessName" />
+            </div>
+            <div class="settings-form-group">
+                <label>Business Category</label>
+                <input type="text" class="settings-input" name="businessCategory"
+                    [(ngModel)]="profileData.businessCategory" placeholder="Restaurant, Retail, SaaS..." />
+            </div>
+            <div class="settings-form-group">
+                <label>Contact Email</label>
+                <input type="email" class="settings-input" name="contactEmail" [(ngModel)]="profileData.contactEmail" />
+            </div>
+            <div class="settings-form-group">
+                <label>Contact Phone</label>
+                <input type="text" class="settings-input" name="contactPhone" [(ngModel)]="profileData.contactPhone" />
+            </div>
+            <div class="settings-form-group">
+                <label>Business Description</label>
+                <textarea class="settings-input" name="description" [(ngModel)]="profileData.description" rows="3"></textarea>
+            </div>
+            <div class="settings-form-group">
+                <label>Website</label>
+                <input type="text" class="settings-input" name="website"
+                    [(ngModel)]="profileData.website" placeholder="https://yourbusiness.com" />
+            </div>
+            <div class="settings-form-group">
+                <label>Business Address</label>
+                <input type="text" class="settings-input" name="businessAddress"
+                    [(ngModel)]="profileData.businessAddress" placeholder="Street, City, State" />
+            </div>
+            <div class="settings-form-group">
+                <label>Operating Hours</label>
+                <input type="text" class="settings-input" name="businessHours"
+                    [(ngModel)]="profileData.businessHours" placeholder="Mon-Sat 9:00 AM - 7:00 PM" />
+            </div>
+            <div class="settings-form-group">
+                <label>Extra Links (comma separated)</label>
+                <textarea class="settings-input" name="externalLinks" [(ngModel)]="profileData.externalLinks"
+                    rows="2" placeholder="https://instagram.com/brand, https://maps.google.com/..."></textarea>
+            </div>
+            <div class="settings-form-group check-row-wrap">
+                <label class="check-row">
+                    <input type="checkbox" [(ngModel)]="profileData.allowMessages" name="allowMessages" />
+                    <span>Allow direct messages</span>
+                </label>
+            </div>
+            <div class="settings-form-group check-row-wrap">
+                <label class="check-row">
+                    <input type="checkbox" [(ngModel)]="profileData.isPublic" name="isPublic" />
+                    <span>Show business profile publicly</span>
+                </label>
+            </div>
+        </ng-container>
+
+        <div class="save-row">
+            <button class="save-btn" (click)="saveProfileDetails()" [disabled]="saving">
+                {{ saving ? 'Saving...' : 'Save Profile Preferences' }}
+            </button>
+            <span *ngIf="saveMessage.text" [class.success]="saveMessage.type === 'success'"
+                [class.error]="saveMessage.type === 'error'">
+                {{ saveMessage.text }}
+            </span>
+        </div>
+    </div>
+</div>

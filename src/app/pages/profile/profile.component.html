@@ -1,0 +1,372 @@
+﻿<div class="profile-container" [class.modal-open]="isProductModalOpen || isAddProductModalOpen">
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+  </div>
+
+  <div *ngIf="error" class="error-banner">
+    <strong>Error:</strong> {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error" class="profile-header glass-panel">
+    <div class="profile-avatar-wrapper" (click)="isOwnProfile ? isEditingPic = !isEditingPic : null">
+      <img [src]="profilePic" alt="Profile" class="profile-avatar-large" />
+      <div *ngIf="isOwnProfile" class="avatar-edit-overlay">
+        <span>Edit</span>
+      </div>
+    </div>
+
+    <div *ngIf="isEditingPic && isOwnProfile" class="avatar-edit-menu glass-panel">
+      <h4>Update Profile Picture</h4>
+      <div class="upload-options">
+        <input type="text" placeholder="Paste image URL..." [(ngModel)]="newPicUrl" />
+        <div class="upload-divider">or</div>
+        <input type="file" id="avatar-upload" accept="image/*" class="file-input-hidden" (change)="onFileSelected($event)" />
+        <label for="avatar-upload" class="file-upload-label">Choose from device</label>
+      </div>
+      <div *ngIf="newPicUrl" class="preview-container">
+        <span class="preview-text">Preview:</span>
+        <img [src]="newPicUrl" alt="Preview" class="avatar-preview-mini" />
+      </div>
+      <div class="edit-menu-actions">
+        <button class="btn-save" (click)="handleUpdatePicture()">Save</button>
+        <button class="btn-remove" (click)="handleRemovePicture()">Remove</button>
+        <button class="btn-cancel" (click)="isEditingPic = false; newPicUrl = ''">Cancel</button>
+      </div>
+    </div>
+
+    <div class="profile-info">
+      <div class="profile-title-row">
+        <h2 class="profile-username">
+          {{ userProfile?.username }}
+          <svg *ngIf="isBusinessProfile && userProfile?.businessProfile?.verified" width="22" height="22" viewBox="0 0 24 24" fill="none" class="verified-badge" title="Verified Business">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="var(--accent-blue)" />
+          </svg>
+        </h2>
+
+        <span *ngIf="isBusinessProfile" class="role-badge role-business">Business</span>
+        <span *ngIf="isCreatorProfile" class="role-badge role-creator">Creator</span>
+        <span *ngIf="isCreatorProfile && creatorCategoryLabel" class="role-badge role-creator-category">{{ creatorCategoryLabel }}</span>
+
+        <button
+          *ngIf="!isOwnProfile"
+          class="btn-connect"
+          [class.pending]="followStatus === 'Pending'"
+          [class.following]="followStatus === 'Following'"
+          (click)="handleConnect()"
+          [disabled]="followStatus === 'Pending' || followActionPending"
+        >
+          {{ followButtonLabel }}
+        </button>
+
+        <a *ngIf="isOwnProfile" routerLink="/saved" class="saved-link-icon" title="Saved posts">&#128278;</a>
+        <a *ngIf="isOwnProfile" routerLink="/profile/preferences" class="saved-link-icon" title="Profile preferences">&#9881;</a>
+      </div>
+
+      <h3 class="profile-fullname">{{ fullName }}</h3>
+      <p class="profile-bio">{{ bio }}</p>
+
+      <div *ngIf="isBusinessProfile && businessCategory" class="creator-niche">
+        <span>{{ businessCategory }}</span>
+      </div>
+
+      <div *ngIf="isBusinessProfile" class="business-contact-actions">
+        <a
+          *ngIf="businessEmail"
+          [href]="'mailto:' + businessEmail"
+          class="contact-action-btn"
+        >
+          Email
+        </a>
+        <a
+          *ngIf="businessPhone"
+          [href]="'tel:' + businessPhone"
+          class="contact-action-btn"
+        >
+          Call
+        </a>
+        <a
+          *ngIf="businessWebsite"
+          [href]="businessWebsite.startsWith('http') ? businessWebsite : 'https://' + businessWebsite"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-action-btn"
+        >
+          Website
+        </a>
+        <a
+          *ngIf="businessDirectionsLink"
+          [href]="businessDirectionsLink"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-action-btn"
+        >
+          Directions
+        </a>
+        <span *ngIf="userProfile?.businessProfile?.businessAddress || userProfile?.businessAddress" class="contact-action-text">
+          {{ businessAddress }}
+        </span>
+        <span *ngIf="businessHours" class="contact-action-text">
+          Hours: {{ businessHours }}
+        </span>
+      </div>
+
+      <div *ngIf="isCreatorProfile && (userProfile?.creatorProfile?.niche || userProfile?.niche)" class="creator-niche">
+        <span>{{ userProfile?.creatorProfile?.niche || userProfile?.niche }}</span>
+      </div>
+      <div *ngIf="isCreatorProfile && creatorLinks.length > 0" class="creator-links">
+        <a *ngFor="let link of creatorLinks"
+           [href]="link.startsWith('http') ? link : 'https://' + link"
+           target="_blank"
+           rel="noopener noreferrer">
+          {{ link }}
+        </a>
+      </div>
+
+      <div class="profile-stats">
+        <div class="stat-box">
+          <span class="stat-count">{{ posts.length }}</span>
+          <span class="stat-label">Posts</span>
+        </div>
+        <div class="stat-box stat-clickable" (click)="openFollowList('followers')">
+          <span class="stat-count">{{ followersCount }}</span>
+          <span class="stat-label">Followers</span>
+        </div>
+        <div class="stat-box stat-clickable" (click)="openFollowList('following')">
+          <span class="stat-count">{{ followingCount }}</span>
+          <span class="stat-label">Following</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !error" class="profile-content-section">
+    <div class="profile-tabs" *ngIf="isBusinessProfile">
+      <button class="tab-btn" [class.active]="activeTab === 'PRODUCTS'" (click)="activeTab = 'PRODUCTS'">
+        Products
+        <span class="tab-count" *ngIf="products.length">{{ products.length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'POSTS'" (click)="activeTab = 'POSTS'">Posts</button>
+      <button *ngIf="isOwnProfile" class="btn-add-product" (click)="openAddProductModal()">Add Product</button>
+    </div>
+
+    <h3 *ngIf="!isBusinessProfile" class="section-title">{{ isOwnProfile ? 'My Posts' : 'Posts' }}</h3>
+
+    <ng-container
+      *ngIf="(userProfile?.userProfile?.isPublic === false || userProfile?.creatorProfile?.isPublic === false || userProfile?.businessProfile?.isPublic === false || userProfile?.isPublic === false) && !isOwnProfile && posts.length === 0 && products.length === 0; else contentView"
+    >
+      <div class="empty-state">
+        <h4>This Account is Private</h4>
+        <p>Follow to see their photos and videos.</p>
+      </div>
+    </ng-container>
+
+    <ng-template #contentView>
+      <div *ngIf="activeTab === 'POSTS'" class="profile-grid" [ngClass]="isCreatorProfile ? creatorGridClass : ''">
+        <ng-container *ngIf="posts.length > 0; else emptyPosts">
+          <div *ngFor="let post of posts"
+               class="profile-grid-item animate-fade-in"
+               [attr.id]="'post-' + (post.postId || post.id)"
+               [class.post-focus-target]="highlightedPostId === (post.postId || post.id)">
+            <div *ngIf="canManageCreatorPosts" class="creator-post-controls">
+              <button class="pin-btn" [class.pinned]="post.isPinned" (click)="togglePinPost(post, $event)">
+                {{ post.isPinned ? 'Unpin' : 'Pin' }}
+              </button>
+              <span *ngIf="isScheduledPending(post)" class="scheduled-badge">
+                Scheduled
+              </span>
+              <span *ngIf="isScheduledPosted(post)" class="scheduled-badge">
+                Posted
+              </span>
+            </div>
+            <app-post-card [post]="post"></app-post-card>
+          </div>
+        </ng-container>
+        <ng-template #emptyPosts>
+          <div class="empty-state">
+            {{ isOwnProfile ? "You haven't posted anything yet. Check out the Create tab to get started!" : "No posts yet." }}
+          </div>
+        </ng-template>
+      </div>
+
+      <div *ngIf="activeTab === 'PRODUCTS' && isBusinessProfile" class="business-products-section animate-fade-in">
+        <div class="product-section-head glass-panel">
+          <div>
+            <h3>Business Products</h3>
+            <p>Browse catalog items with full details, stock, features, and direct order links.</p>
+          </div>
+          <button *ngIf="isOwnProfile" class="btn-add-product secondary" (click)="openAddProductModal()">Add Product</button>
+        </div>
+
+        <div class="product-grid" *ngIf="products.length > 0; else emptyProducts">
+          <div *ngFor="let product of products" class="product-card glass-panel">
+            <div class="product-image-container">
+              <img [src]="getProductImage(product)" [alt]="product.productName" class="product-image" />
+              <div class="product-price">${{ getProductPrice(product) }}</div>
+              <div *ngIf="isOwnProfile" class="product-manage-actions">
+                <button class="btn-manage btn-edit" (click)="openAddProductModal(product); $event.stopPropagation()" title="Edit Product">Edit</button>
+                <button class="btn-manage btn-delete" (click)="deleteProduct(product.id, $event)" title="Delete Product">Delete</button>
+              </div>
+            </div>
+
+            <div class="product-info">
+              <div class="product-topline">
+                <h4 class="product-name">{{ product.productName }}</h4>
+                <span class="stock-pill" [class.out]="product.stock <= 0">
+                  {{ product.stock > 0 ? (product.stock + ' in stock') : 'Out of stock' }}
+                </span>
+              </div>
+
+              <p class="product-description">{{ product.description || 'No description provided.' }}</p>
+
+              <div *ngIf="getVisibleProductFeatures(product).length" class="feature-chips">
+                <span class="feature-chip" *ngFor="let feature of getVisibleProductFeatures(product)">{{ feature }}</span>
+              </div>
+
+              <button class="product-action-btn" (click)="openProductModal(product)">View Details</button>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #emptyProducts>
+          <div class="empty-state">
+            <h4>No Products Yet</h4>
+            <p>{{ isOwnProfile ? "Add products to showcase them in your business profile." : "This business has not added any products." }}</p>
+          </div>
+        </ng-template>
+      </div>
+
+    </ng-template>
+  </div>
+
+  <div class="product-modal-overlay animate-fade-in" *ngIf="isProductModalOpen" (click)="closeProductModal()">
+    <div class="product-modal-content glass-panel" (click)="$event.stopPropagation()">
+      <button class="modal-close-btn" (click)="closeProductModal()">x</button>
+
+      <div class="modal-product-image">
+        <img [src]="getProductImage(selectedProduct)" [alt]="selectedProduct?.productName" />
+      </div>
+
+      <div class="modal-product-details">
+        <div>
+          <h2 class="modal-product-title">{{ selectedProduct?.productName }}</h2>
+          <div class="modal-product-price">${{ getProductPrice(selectedProduct) }}</div>
+          <p class="modal-product-desc">{{ selectedProduct?.description || 'No description provided.' }}</p>
+
+          <div class="modal-product-stock" [class.out]="(selectedProduct?.stock || 0) <= 0">
+            {{ (selectedProduct?.stock || 0) > 0 ? ('In Stock: ' + selectedProduct?.stock) : 'Out of stock' }}
+          </div>
+
+          <div *ngIf="getProductFeatures(selectedProduct).length" class="modal-feature-section">
+            <h4>Features</h4>
+            <ul>
+              <li *ngFor="let feature of getProductFeatures(selectedProduct)">{{ feature }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <a *ngIf="getOrderLink(selectedProduct) as orderLink; else unavailableOrderLink" [href]="orderLink" target="_blank" rel="noopener noreferrer" class="btn-place-order">
+            Place Order
+          </a>
+          <ng-template #unavailableOrderLink>
+            <button class="btn-place-order btn-disabled" title="No valid external link provided">Link Unavailable</button>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="product-modal-overlay animate-fade-in" *ngIf="isAddProductModalOpen" (click)="closeAddProductModal()" style="z-index: 1050;">
+    <div class="manage-product-modal glass-panel" (click)="$event.stopPropagation()">
+      <div class="manage-modal-header">
+        <h3>{{ editingProductId ? 'Edit Product' : 'Add New Product' }}</h3>
+        <button class="modal-close-btn-small" (click)="closeAddProductModal()">x</button>
+      </div>
+
+      <div class="manage-modal-body">
+        <div class="form-group">
+          <label>Product Name*</label>
+          <input type="text" [(ngModel)]="productForm.productName" class="form-input" placeholder="e.g., Signature Coffee Blend" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-half">
+            <label>Price ($)*</label>
+            <input type="number" [(ngModel)]="productForm.price" class="form-input" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group form-half">
+            <label>Stock (Optional)</label>
+            <input type="number" [(ngModel)]="productForm.stock" class="form-input" placeholder="0" min="0" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="productForm.description" class="form-input form-textarea" placeholder="Describe your product..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Features (one per line)</label>
+          <textarea [(ngModel)]="productForm.features" class="form-input form-textarea" placeholder="Free delivery&#10;Freshly roasted&#10;Reusable packaging"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Image URL</label>
+          <input type="text" [(ngModel)]="productForm.imageUrl" class="form-input" placeholder="https://..." />
+        </div>
+
+        <div class="form-group">
+          <label>External Order Link</label>
+          <input type="text" [(ngModel)]="productForm.externalLink" class="form-input" placeholder="https://yourstore.com/product/123" />
+        </div>
+      </div>
+
+      <div class="manage-modal-footer">
+        <button class="btn-cancel-modal" (click)="closeAddProductModal()">Cancel</button>
+        <button class="btn-save-modal" (click)="submitProduct()" [disabled]="isSubmittingProduct">
+          {{ isSubmittingProduct ? 'Saving...' : (editingProductId ? 'Update Product' : 'Add Product') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="product-modal-overlay animate-fade-in" *ngIf="showFollowListModal" (click)="closeFollowListModal()">
+    <div class="follow-list-modal glass-panel" (click)="$event.stopPropagation()">
+      <div class="follow-list-header">
+        <h3>{{ activeFollowListType === 'followers' ? 'Followers' : 'Following' }}</h3>
+        <button class="modal-close-btn-small" (click)="closeFollowListModal()">x</button>
+      </div>
+
+      <div class="follow-list-body" *ngIf="!loadingFollowList; else followListLoading">
+        <ng-container *ngIf="activeFollowListType === 'followers'">
+          <div class="follow-row" *ngFor="let user of followersList">
+            <a [routerLink]="['/profile', user.followerUsername]" (click)="closeFollowListModal()">
+              {{ user.followerUsername }}
+            </a>
+          </div>
+          <div class="empty-state" *ngIf="followersList.length === 0">No followers yet.</div>
+        </ng-container>
+
+        <ng-container *ngIf="activeFollowListType === 'following'">
+          <div class="follow-row" *ngFor="let user of followingList">
+            <a [routerLink]="['/profile', user.followingUsername]" (click)="closeFollowListModal()">
+              {{ user.followingUsername }}
+            </a>
+            <button *ngIf="isOwnProfile" class="btn-unfollow-inline" (click)="unfollowFromList(user.followingId)">
+              Unfollow
+            </button>
+          </div>
+          <div class="empty-state" *ngIf="followingList.length === 0">Not following anyone yet.</div>
+        </ng-container>
+      </div>
+
+      <ng-template #followListLoading>
+        <div class="loading-state">
+          <div class="spinner"></div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>
+
+

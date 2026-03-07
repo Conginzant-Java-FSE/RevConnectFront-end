@@ -1,0 +1,66 @@
+<div class="search-container">
+    <div class="search-header">
+        <h2>Search</h2>
+        <div class="search-input-wrapper">
+            <input type="text" placeholder="Search users..." class="search-input" [ngModel]="query"
+                (ngModelChange)="onSearchChange($event)" />
+        </div>
+    </div>
+
+    <div class="search-results" [class.list-view]="results.length > 0">
+        <div class="recent-header" *ngIf="!query.trim() && recentSearches.length > 0">
+            <span>Recent Searches</span>
+            <button type="button" class="clear-btn" (click)="clearRecentSearches()">Clear all</button>
+        </div>
+
+        <div *ngIf="!query.trim() && recentSearches.length > 0" class="recent-list">
+            <div
+                *ngFor="let recent of recentSearches"
+                class="search-result-item animate-fade-in"
+                (click)="applyRecentSearch(recent)"
+            >
+                <div class="search-avatar">
+                    <img *ngIf="recent.profilePic" [src]="recent.profilePic" [alt]="recent.value" />
+                    <span *ngIf="!recent.profilePic">
+                        {{ recent.type === 'query' ? '?' : recent.value.charAt(0).toUpperCase() }}
+                    </span>
+                </div>
+                <div class="search-info">
+                    <span class="search-username">
+                        <ng-container *ngIf="recent.type === 'account'; else queryLabel">
+                            {{ recent.username }}
+                        </ng-container>
+                        <ng-template #queryLabel>
+                            "{{ recent.value }}"
+                        </ng-template>
+                    </span>
+                    <span class="search-fullname">
+                        {{ recent.type === 'account' ? (recent.role || 'Account') : 'Search query' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <p *ngIf="!query.trim() && recentSearches.length === 0" class="empty-state">Start typing to search...</p>
+        <p *ngIf="loading" class="empty-state">Searching...</p>
+
+        <p *ngIf="!loading && query.trim() && results.length === 0" class="empty-state">
+            No users found for "{{ query }}"
+        </p>
+
+        <div *ngFor="let user of results" class="search-result-item animate-fade-in"
+            (click)="goToProfile(user.username, user)">
+            <div class="search-avatar">
+                <img *ngIf="getProfilePic(user)" [src]="getProfilePic(user)"
+                    [alt]="user.username" />
+                <span *ngIf="!getProfilePic(user)">{{ user.username.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="search-info">
+                <span class="search-username">{{ user.username }}</span>
+                <span class="search-fullname">
+                    {{ user.userProfile?.fullName || user.creatorProfile?.displayName || user.businessProfile?.businessName || user.role }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>

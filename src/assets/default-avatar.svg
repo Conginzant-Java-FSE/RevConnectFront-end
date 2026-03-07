@@ -1,0 +1,16 @@
+<svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED" /> <!-- Indigo-600 -->
+      <stop offset="100%" stop-color="#DB2777" /> <!-- Pink-600 -->
+    </linearGradient>
+    <clipPath id="circleClip">
+      <circle cx="75" cy="75" r="75" />
+    </clipPath>
+  </defs>
+  <circle cx="75" cy="75" r="75" fill="url(#avatarGradient)" />
+  <g clip-path="url(#circleClip)">
+    <circle cx="75" cy="55" r="25" fill="white" fill-opacity="0.9" />
+    <circle cx="75" cy="125" r="50" fill="white" fill-opacity="0.9" />
+  </g>
+</svg>

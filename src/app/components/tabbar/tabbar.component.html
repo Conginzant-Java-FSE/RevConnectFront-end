@@ -1,0 +1,80 @@
+<nav class="tab-bar">
+    <div class="tab-list">
+
+        <a routerLink="/" routerLinkActive="active-tab" [routerLinkActiveOptions]="{exact: true}" class="tab-item">
+            <div class="tab-icon-container">
+                <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="'url(#hero-gradient)'" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" class="glowing-svg">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+            </div>
+        </a>
+
+        <a routerLink="/search" routerLinkActive="active-tab" class="tab-item">
+            <div class="tab-icon-container">
+                <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="'url(#blue-gradient)'" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" class="glowing-svg">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+            </div>
+        </a>
+
+        <a *ngIf="isCreator || isBusiness" routerLink="/creator/marketplace" routerLinkActive="active-tab" class="tab-item">
+            <div class="tab-icon-container">
+                <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="'url(#gold-gradient)'" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" class="glowing-svg">
+                    <path d="M6 7h12l-1 13H7L6 7z" />
+                    <path d="M9 9V6a3 3 0 0 1 6 0v3" />
+                </svg>
+            </div>
+        </a>
+
+        <a routerLink="/messages" routerLinkActive="active-tab" class="tab-item">
+            <div class="tab-icon-container">
+                <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="'url(#blue-purple-gradient)'" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" class="glowing-svg">
+                    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+                </svg>
+                <div class="notification-badge-small" *ngIf="messageUnreadCount > 0">
+                    {{ messageUnreadCount > 99 ? '99+' : messageUnreadCount }}
+                </div>
+            </div>
+        </a>
+
+        <!-- Floating Action Button for Create Center -->
+        <div class="tab-item create-fab" (click)="onOpenCreateModal.emit()">
+            <div class="tab-icon-container">
+                <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="'url(#pink-purple-gradient)'" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" class="glowing-svg">
+                    <rect x="3" y="3" width="18" height="18" rx="4" ry="4" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+            </div>
+        </div>
+
+        <a routerLink="/notifications" routerLinkActive="active-tab" class="tab-item">
+            <div class="tab-icon-container">
+                <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="'url(#red-gradient)'" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" class="glowing-svg notification-shake">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
+                <div class="notification-badge-small" *ngIf="unreadCount > 0">
+                    {{ unreadCount > 99 ? '99+' : unreadCount }}
+                </div>
+            </div>
+        </a>
+
+        <a [routerLink]="profileRoute" routerLinkActive="active-tab" class="tab-item">
+            <div class="profile-icon-small" style="overflow: hidden;">
+                <img *ngIf="user?.userProfile?.profilepicURL || user?.creatorProfile?.profilepicURL || user?.businessProfile?.logoUrl"
+                    [src]="user.userProfile?.profilepicURL || user.creatorProfile?.profilepicURL || user.businessProfile?.logoUrl"
+                    [alt]="user.username" style="width: 100%; height: 100%; object-fit: cover;" />
+            </div>
+        </a>
+
+    </div>
+</nav>

@@ -1,0 +1,361 @@
+<div class="mesh">
+    <div class="mesh-blob"></div>
+    <div class="mesh-blob"></div>
+    <div class="mesh-blob"></div>
+</div>
+
+<div class="page">
+
+    <!-- HEADER -->
+    <header>
+        <a class="logo-text" routerLink="/">RevConnect</a>
+        <nav>
+            <a href="#features">Features</a>
+            <a href="#community">Community</a>
+            <a href="#about">About</a>
+            <a routerLink="/login" class="nav-cta">Sign In</a>
+        </nav>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero" id="hero">
+        <div class="hero-left">
+            <h1 class="hero-title">
+                Small moments,<br />
+                <span class="gradient-line">Stronger Connections.</span>
+            </h1>
+            <div class="hero-actions">
+                <button class="btn-primary" routerLink="/register">
+                    Get Started
+                    <svg class="btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M4 10h12M10 4l6 6-6 6" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 5-CARD STACK -->
+        <div class="hero-right">
+            <div class="card-scene" #cardScene id="cardScene">
+                <div class="scene-glow" #sceneGlow id="sceneGlow"></div>
+
+                <div class="rc-card" id="card0" (click)="handleCardClick(0)">
+                    <div class="card-photo">
+                        <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=85&auto=format&fit=crop"
+                            alt="Friends laughing" />
+                        <div class="card-chip chip-tr">😄 Best moment</div>
+                        <div class="card-label">
+                            <div class="card-label-text">Golden moments</div>
+                            <div class="card-label-sub">Shared just now</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rc-card" id="card1" (click)="handleCardClick(1)">
+                    <div class="card-photo">
+                        <img src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&q=85&auto=format&fit=crop"
+                            alt="Happy couple" />
+                        <div class="card-chip chip-tl">🌅 Golden hour</div>
+                        <div class="card-label">
+                            <div class="card-label-text">Sunset together</div>
+                            <div class="card-label-sub">5 minutes ago</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rc-card" id="card2" (click)="handleCardClick(2)">
+                    <div class="card-photo">
+                        <img src="https://images.unsplash.com/photo-1543807535-eceef0bc6599?w=600&q=85&auto=format&fit=crop"
+                            alt="Friends outdoors" />
+                        <div class="card-chip chip-tr">🔥 Trending</div>
+                        <div class="card-label">
+                            <div class="card-label-text">Squad goals</div>
+                            <div class="card-label-sub">12 minutes ago</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rc-card" id="card3" (click)="handleCardClick(3)">
+                    <div class="card-photo">
+                        <img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&q=85&auto=format&fit=crop"
+                            alt="Smiling portrait" />
+                        <div class="card-chip chip-tl">✨ Just posted</div>
+                        <div class="card-label">
+                            <div class="card-label-text">Pure joy</div>
+                            <div class="card-label-sub">18 minutes ago</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rc-card" id="card4" (click)="handleCardClick(4)">
+                    <div class="card-photo">
+                        <img src="https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=600&q=85&auto=format&fit=crop"
+                            alt="Travel friends" />
+                        <div class="card-chip chip-br">🌍 Adventure</div>
+                        <div class="card-label">
+                            <div class="card-label-text">New memories</div>
+                            <div class="card-label-sub">25 minutes ago</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-dots">
+                    <div class="dot active" (click)="goToCard(0)"></div>
+                    <div class="dot" (click)="goToCard(1)"></div>
+                    <div class="dot" (click)="goToCard(2)"></div>
+                    <div class="dot" (click)="goToCard(3)"></div>
+                    <div class="dot" (click)="goToCard(4)"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+        <h2 class="section-title">Everything you need to connect</h2>
+        <p class="section-sub">Built for real people, real moments, real relationships.</p>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon-big">📸</div>
+                <h3>Share Moments</h3>
+                <p>Post photos, short videos, and stories. Share what matters to you with the people who matter most.
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-big">💬</div>
+                <h3>Real Conversations</h3>
+                <p>Comment, react, and have genuine conversations. No algorithms hiding what your close circle is
+                    saying.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-big">🔒</div>
+                <h3>Privacy First</h3>
+                <p>You control who sees what. Your data stays yours — we never sell it or use it for ads.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-big">🌍</div>
+                <h3>Global Community</h3>
+                <p>Connect with people across 140+ countries who share your interests, passions, and values.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-big">⚡</div>
+                <h3>Lightning Fast</h3>
+                <p>Built on modern infrastructure so your feed loads instantly, no matter where you are.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-big">🤝</div>
+                <h3>Genuine Bonds</h3>
+                <p>Discover people who truly get you. Build friendships that go beyond a follower count.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMMUNITY – REDESIGNED -->
+    <section id="community">
+        <div class="community-inner">
+
+            <div class="community-text">
+                <h2>A community that <em>feels like home</em></h2>
+                <p>RevConnect isn't just another social app. It's a space where you can be yourself, share freely, and
+                    build connections that actually last beyond a scroll.</p>
+                <p>Whether you're sharing a quiet coffee moment or a wild group adventure — every post matters here.</p>
+            </div>
+
+            <!-- CREATIVE VISUAL CARDS -->
+            <div class="community-visual">
+
+                <!-- Card 1: Your Stories, Your World -->
+                <div class="cv-card cv-card-1">
+                    <div class="cv-inner">
+                        <div class="cv1-text">
+                            <div class="cv-eyebrow">Stories</div>
+                            <h3>Your story,<br />your world</h3>
+                            <p>Share fleeting moments that disappear — or keep them forever.</p>
+                            <button class="nav-cta" routerLink="/login"
+                                style="margin-top: 1rem; padding: 0.4rem 1rem; font-size: 0.75rem;">Create a
+                                Story</button>
+                        </div>
+                        <div class="cv1-stories">
+                            <div class="story-bubble">
+                                <div class="story-ring">
+                                    <div class="story-ring-inner">🌸</div>
+                                </div>
+                                <div class="story-label">Priya</div>
+                            </div>
+                            <div class="story-bubble">
+                                <div class="story-ring">
+                                    <div class="story-ring-inner">🏄</div>
+                                </div>
+                                <div class="story-label">Arjun</div>
+                            </div>
+                            <div class="story-bubble">
+                                <div class="story-ring">
+                                    <div class="story-ring-inner">☕</div>
+                                </div>
+                                <div class="story-label">Mia</div>
+                            </div>
+                            <div class="story-bubble">
+                                <div class="story-add">+</div>
+                                <div class="story-label" style="font-size:0.58rem;color:rgba(255,255,255,0.4);">Add
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Capture Every Moment -->
+                <div class="cv-card cv-card-2">
+                    <div class="cv-inner">
+                        <div class="cv2-top">
+                            <div class="cv2-eyebrow">Capture</div>
+                            <div class="cv2-title">Every moment<br />deserves to be seen</div>
+                        </div>
+                        <div class="cv2-bottom">
+                            <div class="cv2-desc">From sunrise to midnight — no moment is too small.</div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+                                <div class="cv2-icon" routerLink="/login" style="cursor: pointer;">📷</div>
+                                <div class="cv2-thumbs">
+                                    <div class="cv2-thumb" routerLink="/login" style="cursor: pointer;"></div>
+                                    <div class="cv2-thumb" routerLink="/login" style="cursor: pointer;"></div>
+                                    <div class="cv2-thumb" routerLink="/login" style="cursor: pointer;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Real Connections -->
+                <div class="cv-card cv-card-3">
+                    <div class="cv-inner">
+                        <div class="cv3-top">
+                            <div class="cv3-eyebrow">Connections</div>
+                            <div class="cv3-title">Bonds that<br />go deeper</div>
+                        </div>
+                        <div class="cv3-bottom">
+                            <div class="cv3-connection" routerLink="/login" style="cursor: pointer;">
+                                <div class="cv3-avatars">
+                                    <div class="cv3-av">A</div>
+                                    <div class="cv3-av">R</div>
+                                    <div class="cv3-av">K</div>
+                                </div>
+                                <div class="cv3-connection-text">3 new connections today</div>
+                                <div class="cv3-heart">❤️</div>
+                            </div>
+                            <div class="cv3-connection" routerLink="/login" style="cursor: pointer;">
+                                <div class="cv3-avatars">
+                                    <div class="cv3-av">M</div>
+                                    <div class="cv3-av">S</div>
+                                </div>
+                                <div class="cv3-connection-text">Close friends · 2 mutual</div>
+                                <div class="cv3-heart">🌟</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about">
+        <div class="about-inner">
+            <div class="about-text">
+                <h2>Why we built RevConnect</h2>
+                <p>We believed the world needed a social platform that put people over engagement metrics. No dark
+                    patterns, no anxiety-inducing feeds — just genuine human connection.</p>
+                <p>RevConnect was built from the ground up with one question in mind: <em>"Does this make people feel
+                        closer?"</em></p>
+            </div>
+            <div class="about-values">
+                <div class="value-item">
+                    <div class="value-emoji">❤️</div>
+                    <div>
+                        <h4>People over metrics</h4>
+                        <p>We don't optimise for time-on-app. We optimise for how good you feel when you close it.</p>
+                    </div>
+                </div>
+                <div class="value-item">
+                    <div class="value-emoji">🛡️</div>
+                    <div>
+                        <h4>Radical transparency</h4>
+                        <p>You always know what we do with your data. No hidden clauses, no surprises.</p>
+                    </div>
+                </div>
+                <div class="value-item">
+                    <div class="value-emoji">🌱</div>
+                    <div>
+                        <h4>Built to last</h4>
+                        <p>We're building for the long haul — not the next quarter. Real relationships take time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- STRIP -->
+    <div class="strip">
+        <div class="strip-item">
+            <div class="strip-icon">📸</div> Share moments
+        </div>
+        <div class="strip-item">
+            <div class="strip-icon">💬</div> Real conversations
+        </div>
+        <div class="strip-item">
+            <div class="strip-icon">🔒</div> Privacy first
+        </div>
+        <div class="strip-item">
+            <div class="strip-icon">🌍</div> Global community
+        </div>
+        <div class="strip-item">
+            <div class="strip-icon">⚡</div> Lightning fast
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-links">
+                <a href="#about">About</a>
+                <a href="javascript:void(0)" (click)="openModal('help')">Help</a>
+                <a href="javascript:void(0)" (click)="openModal('privacy')">Privacy</a>
+                <a href="javascript:void(0)" (click)="openModal('terms')">Terms</a>
+            </div>
+            <div class="footer-bottom">
+                © 2026 <span>RevConnect</span> · Made with ❤️ for real connections
+            </div>
+        </div>
+    </footer>
+
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-help" (click)="closeOnOverlay($event,'help')">
+    <div class="modal">
+        <button class="modal-close" (click)="closeModal('help')">✕</button>
+        <h2>Help & Support</h2>
+        <p>Need help with RevConnect? Our support team is here for you. Reach out at
+            <strong>support&#64;revconnect.app</strong> and we'll get back to you within 24 hours.
+        </p>
+        <p>Common topics: account settings, privacy controls, reporting content, and managing your connections.</p>
+    </div>
+</div>
+<div class="modal-overlay" id="modal-privacy" (click)="closeOnOverlay($event,'privacy')">
+    <div class="modal">
+        <button class="modal-close" (click)="closeModal('privacy')">✕</button>
+        <h2>Privacy Policy</h2>
+        <p>Your privacy is fundamental to everything we build. RevConnect collects only the data necessary to provide
+            you a great experience — and we never sell it to third parties.</p>
+        <p>You have full control over your data. You can export, edit, or delete everything at any time from your
+            account settings.</p>
+    </div>
+</div>
+<div class="modal-overlay" id="modal-terms" (click)="closeOnOverlay($event,'terms')">
+    <div class="modal">
+        <button class="modal-close" (click)="closeModal('terms')">✕</button>
+        <h2>Terms of Service</h2>
+        <p>By using RevConnect, you agree to share content responsibly and treat fellow members with respect. We have a
+            zero tolerance policy for harassment, hate speech, and harmful content.</p>
+        <p>RevConnect reserves the right to remove content or accounts that violate community guidelines.</p>
+    </div>
+</div>

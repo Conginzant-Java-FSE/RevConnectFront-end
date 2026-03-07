@@ -1,0 +1,460 @@
+.market-shell {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 6px 28px;
+}
+
+.market-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 14px;
+}
+
+.market-state.error {
+  color: var(--accent-red);
+}
+
+.market-state.success {
+  color: #4ade80;
+}
+
+.market-hero {
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(6, 182, 212, 0.22), transparent 45%),
+    radial-gradient(circle at 95% 100%, rgba(249, 115, 22, 0.2), transparent 48%),
+    var(--bg-panel);
+}
+
+.market-kicker {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.market-hero h2 {
+  margin: 5px 0 0;
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.market-hero p {
+  margin: 9px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 700px;
+}
+
+.market-analytics-link {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #34d399, #06b6d4);
+}
+
+.role-chip {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.role-chip.creator {
+  border-color: rgba(168, 85, 247, 0.35);
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.role-chip.business {
+  border-color: rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.14);
+}
+
+.market-filter,
+.market-section {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.market-filter label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.filter-row {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.filter-row input {
+  flex: 1;
+}
+
+.filter-row input,
+.opportunity-form input,
+.opportunity-form textarea,
+.apply-modal textarea {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  padding: 10px;
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.filter-row button,
+.opportunity-form button,
+.apply-btn {
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #06b6d4, #a855f7);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.section-head h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.section-head span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.opportunity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.opportunity-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.opportunity-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.opp-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.opp-top strong {
+  font-size: 15px;
+}
+
+.opportunity-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.opp-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.status {
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.status.open,
+.status.pending {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.status.accepted {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.34);
+}
+
+.status.rejected {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.36);
+}
+
+.status.in-promotion {
+  background: rgba(250, 204, 21, 0.15);
+  border-color: rgba(250, 204, 21, 0.38);
+}
+
+.status.promotion-requested {
+  background: rgba(147, 197, 253, 0.15);
+  border-color: rgba(147, 197, 253, 0.35);
+}
+
+.status.creator-confirmed {
+  background: rgba(134, 239, 172, 0.15);
+  border-color: rgba(134, 239, 172, 0.35);
+}
+
+.status.completed {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.application-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.application-row {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.application-row strong {
+  font-size: 14px;
+}
+
+.application-row p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.proposal-subtitle {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.business-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.roi-card {
+  background:
+    radial-gradient(circle at 6% 0%, rgba(16, 185, 129, 0.16), transparent 46%),
+    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15), transparent 52%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.roi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.roi-item {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.roi-item span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.roi-item strong {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.opportunity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opportunity-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.budget-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.biz-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mini-btn {
+  border-radius: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mini-btn.accept {
+  background: rgba(74, 222, 128, 0.22);
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.mini-btn.reject,
+.mini-btn.danger {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.mini-btn.start {
+  background: rgba(250, 204, 21, 0.2);
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+.mini-btn.complete {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.apply-modal-wrap {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.66);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.apply-modal {
+  width: 100%;
+  max-width: 560px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.apply-modal h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.apply-modal p {
+  margin: 7px 0 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.modal-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 1000px) {
+  .opportunity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .business-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .roi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .market-shell {
+    padding: 3px 2px 20px;
+  }
+
+  .market-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .market-hero h2 {
+    font-size: 27px;
+  }
+
+  .filter-row {
+    flex-direction: column;
+  }
+
+  .opportunity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .application-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .biz-actions {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,143 @@
+<div class="analytics-state" *ngIf="loading">Loading creator analytics...</div>
+<div class="analytics-state error" *ngIf="!loading && error">{{ error }}</div>
+
+<section class="analytics-shell animate-fade-in" *ngIf="!loading && !error">
+  <header class="analytics-hero glass-panel">
+    <div class="hero-copy">
+      <p class="hero-kicker">Creator Analytics</p>
+      <h2>Performance Command Center</h2>
+      <p>
+        Track reach, impressions, saves, watch-time, audience quality, and growth patterns in one place.
+      </p>
+      <a routerLink="/creator/marketplace" class="hero-cta">Open Collaboration Marketplace</a>
+    </div>
+    <div class="hero-metric">
+      <div class="metric-label">Best Time To Post</div>
+      <div class="metric-time">{{ bestTimeToPost.label || 'Not enough data yet' }}</div>
+      <div class="metric-sub">Avg engagement: {{ bestTimeToPost.averageEngagement || 0 }}</div>
+    </div>
+  </header>
+
+  <div class="metric-grid">
+    <article class="metric-card glass-panel">
+      <span>Total Reach</span>
+      <h3>{{ totalReach }}</h3>
+    </article>
+    <article class="metric-card glass-panel">
+      <span>Total Impressions</span>
+      <h3>{{ totalImpressions }}</h3>
+    </article>
+    <article class="metric-card glass-panel">
+      <span>Total Saves</span>
+      <h3>{{ totalSaves }}</h3>
+    </article>
+    <article class="metric-card glass-panel">
+      <span>Watch Time</span>
+      <h3>{{ totalWatchTime | number:'1.0-0' }}s</h3>
+    </article>
+  </div>
+
+  <div class="analytics-grid">
+    <article class="analytics-panel glass-panel">
+      <h4>Follower Demographics</h4>
+      <p class="panel-sub">Age, gender, and location</p>
+
+      <div class="group-title">Age Distribution</div>
+      <div class="bar-group">
+        <div class="bar-row" *ngFor="let row of ageDistributionRows">
+          <span>{{ row.label }}</span>
+          <div class="bar-track">
+            <div class="bar-fill warm" [style.width]="asBarWidth(row.value, followerDemographics?.totalFollowers || 1)"></div>
+          </div>
+          <strong>{{ row.value }}</strong>
+        </div>
+      </div>
+
+      <div class="group-title">Gender Distribution</div>
+      <div class="chip-wrap">
+        <span class="gender-chip" *ngFor="let row of genderDistributionRows">
+          {{ row.label }}: {{ row.value }}
+        </span>
+      </div>
+
+      <div class="group-title">Top Locations</div>
+      <div class="locations">
+        <div *ngFor="let item of followerDemographics?.topLocations || []" class="location-row">
+          <span>{{ item.location }}</span>
+          <strong>{{ item.count }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="analytics-panel glass-panel">
+      <h4>Stories & Reels</h4>
+      <p class="panel-sub">Retention and completion quality</p>
+      <div class="compact-metrics">
+        <div class="compact-row">
+          <span>Story Views</span>
+          <strong>{{ storyMetrics.views || 0 }}</strong>
+        </div>
+        <div class="compact-row">
+          <span>Story Tap-through Rate</span>
+          <strong>{{ storyMetrics.tapThroughRate || 0 }}%</strong>
+        </div>
+        <div class="compact-row">
+          <span>Total Reels</span>
+          <strong>{{ reelMetrics.totalReels || 0 }}</strong>
+        </div>
+        <div class="compact-row">
+          <span>Reel Completion</span>
+          <strong>{{ reelMetrics.completionRate || 0 }}%</strong>
+        </div>
+      </div>
+
+      <div class="ring-wrap">
+        <div class="ring" [style.--pct]="asSafePercent(reelMetrics.completionRate || 0)">
+          <div class="ring-core">
+            <span>{{ reelMetrics.completionRate || 0 }}%</span>
+            <small>Completion</small>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="analytics-panel glass-panel growth-panel">
+      <h4>Follower Growth (30 days)</h4>
+      <p class="panel-sub">Daily follower progression</p>
+      <div class="growth-track">
+        <div
+          *ngFor="let point of followerGrowthPoints; trackBy: trackByDate"
+          class="growth-bar"
+          [style.height]="asBarWidth(point.followers || 0, highestGrowthValue)"
+          [attr.title]="(point.date || '') + ': ' + (point.followers || 0)"
+        ></div>
+      </div>
+      <div class="growth-footer">
+        <span>{{ followerGrowthPoints[0]?.date || '' }}</span>
+        <span>{{ followerGrowthPoints[followerGrowthPoints.length - 1]?.date || '' }}</span>
+      </div>
+    </article>
+  </div>
+
+  <article class="analytics-panel post-metrics glass-panel">
+    <h4>Post-level Reach, Impressions & Saves</h4>
+    <p class="panel-sub">Every published post performance snapshot</p>
+    <div class="post-cards" *ngIf="postMetrics.length > 0; else noMetrics">
+      <div class="post-card" *ngFor="let item of postMetrics; trackBy: trackByPost">
+        <div class="post-top">
+          <span>#{{ item.postId }}</span>
+          <span>{{ item.mediaType || 'POST' }}</span>
+        </div>
+        <div class="post-grid">
+          <div><small>Reach</small><strong>{{ item.reach || 0 }}</strong></div>
+          <div><small>Impressions</small><strong>{{ item.impressions || 0 }}</strong></div>
+          <div><small>Saves</small><strong>{{ item.saves || 0 }}</strong></div>
+          <div><small>Watch</small><strong>{{ item.watchTimeSeconds || 0 }}s</strong></div>
+        </div>
+      </div>
+    </div>
+    <ng-template #noMetrics>
+      <div class="analytics-state">No post metrics available yet.</div>
+    </ng-template>
+  </article>
+</section>

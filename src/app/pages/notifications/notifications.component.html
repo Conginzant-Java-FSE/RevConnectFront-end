@@ -1,0 +1,52 @@
+<div class="notifications-container animate-fade-in">
+  <div class="notifications-topbar">
+    <div class="topbar-copy">
+      <h2>Notifications</h2>
+      <p>Stay updated with likes, comments, follows, and requests.</p>
+    </div>
+    <div class="topbar-actions">
+      <button *ngIf="unreadCount > 0" class="mark-read-btn" (click)="handleMarkAllRead()">
+        Mark all as read
+      </button>
+      <button class="close-btn-top" routerLink="/home" aria-label="Close notifications">Close</button>
+    </div>
+  </div>
+
+  <div class="notifications-list">
+    <p *ngIf="loading" class="loading-text">Loading...</p>
+
+    <div *ngIf="!loading && notifications.length === 0" class="empty-state">
+      <i class="bell-icon">Bell</i>
+      <h4>Nothing to see here</h4>
+      <p>When someone interacts with your profile, you will see it here.</p>
+    </div>
+
+    <div *ngFor="let notif of notifications" class="notification-item" [class.unread]="!notif.read"
+      (click)="handleMarkAsRead(notif.id, notif.read)">
+      <div class="notification-avatar" (click)="goToProfile($event, notif.actorUsername)">
+        <img [src]="notif.actorProfilePic || '/assets/default-avatar.svg'" [alt]="notif.actorUsername" />
+      </div>
+
+      <div class="notification-content">
+        <p>
+          <strong (click)="goToProfile($event, notif.actorUsername)">
+            {{ notif.actorUsername }}
+          </strong> {{ getMessage(notif.type) }}
+        </p>
+
+        <span class="notification-time">
+          {{ formatTimeAgo(notif.createdAt) }}
+        </span>
+
+        <div *ngIf="notif.type === 'FOLLOW_REQUEST'" class="request-actions">
+          <button class="btn-accept" (click)="handleAcceptRequest($event, notif.referenceId, notif.id)">
+            Accept
+          </button>
+          <button class="btn-reject" (click)="handleRejectRequest($event, notif.referenceId, notif.id)">
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

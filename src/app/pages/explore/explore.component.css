@@ -1,0 +1,147 @@
+.explore-shell {
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 18px 14px 40px;
+}
+
+.explore-top {
+    margin-bottom: 18px;
+}
+
+.explore-title {
+    font-size: 30px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.02em;
+    background: var(--brand-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.explore-copy {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.explore-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+}
+
+.explore-tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.explore-tile:hover {
+    transform: scale(1.035);
+    z-index: 3;
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+}
+
+.explore-media {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: #000;
+    transition: transform 0.32s ease;
+}
+
+.explore-tile:hover .explore-media {
+    transform: scale(1.08);
+}
+
+.tile-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.05) 48%, transparent 65%);
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+}
+
+.explore-tile:hover .tile-gradient {
+    opacity: 1;
+}
+
+.tile-meta {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.tile-user {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    max-width: 75%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tile-type {
+    color: #fff;
+    font-size: 10px;
+    letter-spacing: 0.7px;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 4px 7px;
+    border-radius: 999px;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 56px 30px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+}
+
+.empty-icon {
+    margin-bottom: 10px;
+    font-size: 22px;
+}
+
+@media (max-width: 920px) {
+    .explore-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .explore-shell {
+        padding: 14px 8px 28px;
+    }
+
+    .explore-grid {
+        gap: 6px;
+    }
+
+    .explore-title {
+        font-size: 26px;
+    }
+
+    .tile-user {
+        font-size: 11px;
+    }
+}

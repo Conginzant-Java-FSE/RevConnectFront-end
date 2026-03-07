@@ -1,0 +1,38 @@
+<section class="studio-shell animate-fade-in">
+  <header class="studio-hero glass-panel">
+    <p class="studio-kicker">Creator Studio</p>
+    <h2>Collab Inbox</h2>
+    <p>Approve or reject co-author requests.</p>
+  </header>
+
+  <div class="studio-state" *ngIf="loading">Loading studio...</div>
+  <div class="studio-state error" *ngIf="!loading && error">{{ error }}</div>
+
+  <ng-container *ngIf="!loading && !error">
+    <article class="studio-panel glass-panel">
+      <div class="studio-head">
+        <h3>Pending Co-author Requests</h3>
+        <span>{{ pendingCollabs.length }} pending</span>
+      </div>
+
+      <div class="studio-list" *ngIf="pendingCollabs.length > 0; else noPending">
+        <div class="studio-row" *ngFor="let post of pendingCollabs">
+          <div class="studio-main">
+            <strong>Post #{{ post.postId }}</strong>
+            <span>By &#64;{{ post.userName }}</span>
+            <p>{{ post.description || 'No caption' }}</p>
+          </div>
+          <div class="studio-actions">
+            <button class="mini-btn accept" (click)="accept(post.postId)">Accept</button>
+            <button class="mini-btn reject" (click)="reject(post.postId)">Reject</button>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noPending>
+        <div class="studio-state">No pending co-author requests.</div>
+      </ng-template>
+    </article>
+
+  </ng-container>
+</section>

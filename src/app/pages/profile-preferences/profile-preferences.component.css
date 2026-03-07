@@ -1,0 +1,135 @@
+.profile-preferences-container {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 8px 0 24px;
+}
+
+.page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.page-head h2 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--text-primary);
+}
+
+.page-head p {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.back-btn {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.preferences-card {
+    padding: 22px;
+}
+
+.settings-form-group {
+    margin-bottom: 16px;
+}
+
+.settings-form-group label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.settings-input {
+    width: 100%;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+textarea.settings-input {
+    resize: vertical;
+    min-height: 78px;
+}
+
+.eligibility-box {
+    line-height: 1.6;
+}
+
+.eligibility-note {
+    margin-top: 6px;
+    color: var(--text-secondary);
+}
+
+.check-row-wrap label {
+    margin-bottom: 0;
+}
+
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-primary);
+}
+
+.save-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.save-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--brand-gradient);
+}
+
+.save-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.save-row span {
+    font-size: 13px;
+}
+
+.save-row span.success {
+    color: #10b981;
+}
+
+.save-row span.error {
+    color: #ef4444;
+}
+
+@media (max-width: 700px) {
+    .page-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

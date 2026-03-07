@@ -1,0 +1,32 @@
+<section class="saved-shell animate-fade-in">
+  <header class="saved-hero glass-panel">
+    <div>
+      <p class="saved-kicker">Library</p>
+      <h2>Saved Posts</h2>
+      <p>Everything you bookmarked in one place.</p>
+    </div>
+  </header>
+
+  <div class="saved-state" *ngIf="loading">Loading saved posts...</div>
+  <div class="saved-state error" *ngIf="!loading && error">{{ error }}</div>
+
+  <div class="saved-grid" *ngIf="!loading && !error && savedPosts.length > 0">
+    <article class="saved-card glass-panel" *ngFor="let item of savedPosts">
+      <div class="saved-media-wrap" *ngIf="item.post?.mediaUrl">
+        <img *ngIf="!isVideo(item.post)" [src]="item.post.mediaUrl" alt="Saved post" class="saved-media" />
+        <video *ngIf="isVideo(item.post)" [src]="item.post.mediaUrl" class="saved-media" controls muted playsinline></video>
+      </div>
+
+      <div class="saved-content">
+        <p class="saved-desc">{{ item.post?.description || 'No caption' }}</p>
+        <p class="saved-time">Saved {{ item.createdAt | date:'mediumDate' }}</p>
+      </div>
+
+      <button class="saved-remove" (click)="unsave(item.post?.id)">Remove</button>
+    </article>
+  </div>
+
+  <div class="saved-state" *ngIf="!loading && !error && savedPosts.length === 0">
+    No saved posts yet.
+  </div>
+</section>

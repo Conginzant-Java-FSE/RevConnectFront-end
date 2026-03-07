@@ -1,0 +1,8 @@
+/* Fix for Login/Register Pages that have no sidebar */
+.auth-main-content {
+    flex-grow: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0px;
+}

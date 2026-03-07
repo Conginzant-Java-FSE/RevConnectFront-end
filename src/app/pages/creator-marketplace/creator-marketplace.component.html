@@ -1,0 +1,421 @@
+<div class="market-state" *ngIf="loading">Loading marketplace...</div>
+<div class="market-state error" *ngIf="!loading && error">{{ error }}</div>
+<div class="market-state success" *ngIf="!loading && !error && success">{{ success }}</div>
+
+<section class="market-shell animate-fade-in" *ngIf="!loading">
+  <header class="market-hero glass-panel">
+    <div>
+      <p class="market-kicker">Brand Collaboration Marketplace</p>
+      <h2>Deals, Campaigns, and Creator Partnerships</h2>
+      <p>Discover brand opportunities or publish campaigns and manage applications.</p>
+      <a *ngIf="isCreator" routerLink="/creator/analytics" class="market-analytics-link">Open Creator Analytics</a>
+    </div>
+    <div class="role-chip" [class.creator]="isCreator" [class.business]="isBusiness">
+      {{ isCreator ? 'Creator Mode' : isBusiness ? 'Business Mode' : 'Viewer Mode' }}
+    </div>
+  </header>
+
+  <article class="market-section glass-panel">
+    <div class="section-head">
+      <h3>Open Opportunities</h3>
+      <span>{{ opportunities.length }} live</span>
+    </div>
+
+    <div class="opportunity-grid" *ngIf="opportunities.length > 0; else noOpenOpps">
+      <div class="opportunity-card" *ngFor="let opportunity of opportunities; trackBy: trackByOpportunity">
+        <div class="opp-top">
+          <strong>{{ opportunity.title }}</strong>
+          <span class="status open">{{ opportunity.status }}</span>
+        </div>
+        <p>{{ opportunity.description }}</p>
+        <div class="opp-meta">
+          <span>Category: {{ opportunity.creatorCategory || 'Any' }}</span>
+          <span>Budget: {{ opportunity.minBudget || 0 }} - {{ opportunity.maxBudget || 0 }}</span>
+        </div>
+        <div class="opp-meta">
+          <span>Business: &#64;{{ opportunity.businessUsername || 'business' }}</span>
+          <span>{{ opportunity.createdAt | date:'mediumDate' }}</span>
+        </div>
+        <button
+          *ngIf="isCreator"
+          class="apply-btn"
+          (click)="openApplyModal(opportunity)"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+    <ng-template #noOpenOpps>
+      <div class="market-state">No open opportunities available right now.</div>
+    </ng-template>
+  </article>
+
+  <article class="market-section glass-panel" *ngIf="isCreator">
+    <div class="section-head">
+      <h3>My Applications</h3>
+      <span>{{ myApplications.length }} submitted</span>
+    </div>
+    <div class="application-list" *ngIf="myApplications.length > 0; else noApplications">
+      <div class="application-row" *ngFor="let application of myApplications; trackBy: trackByApplication">
+        <div>
+          <strong>{{ application.opportunity?.title || ('Opportunity #' + application.opportunity?.id) }}</strong>
+          <p>{{ application.pitchMessage }}</p>
+          <p class="proposal-subtitle" *ngIf="application.promotionDetails">Promotion Details: {{ application.promotionDetails }}</p>
+          <p class="proposal-subtitle" *ngIf="application.promotionProductLink">Buy Link: {{ application.promotionProductLink }}</p>
+          <p class="proposal-subtitle" *ngIf="application.promotionBusinessPostId">Business Post ID: {{ application.promotionBusinessPostId }}</p>
+          <p class="proposal-subtitle" *ngIf="application.promotionProductImageUrl">
+            Product Image:
+            <a [href]="application.promotionProductImageUrl" target="_blank" rel="noopener noreferrer">{{ application.promotionProductImageUrl }}</a>
+          </p>
+          <p class="proposal-subtitle" *ngIf="application.creatorConfirmationNote">My Confirmation: {{ application.creatorConfirmationNote }}</p>
+        </div>
+        <div class="biz-actions">
+          <span class="status"
+            [class.pending]="application.status === 'PENDING'"
+            [class.accepted]="application.status === 'ACCEPTED'"
+            [class.rejected]="application.status === 'REJECTED'"
+            [class.promotion-requested]="application.status === 'PROMOTION_REQUESTED'"
+            [class.in-promotion]="application.status === 'IN_PROMOTION'"
+            [class.creator-confirmed]="application.status === 'CREATOR_CONFIRMED'"
+            [class.completed]="application.status === 'COMPLETED'">
+            {{ application.status }}
+          </span>
+          <button class="mini-btn accept"
+            *ngIf="application.status === 'PROMOTION_REQUESTED'"
+            (click)="acceptApplicationPromotion(application.id)"
+            [disabled]="promotionActionApplicationId === application.id">
+            {{ promotionActionApplicationId === application.id ? 'Accepting...' : 'Accept Promotion' }}
+          </button>
+          <button class="mini-btn complete"
+            *ngIf="application.status === 'IN_PROMOTION'"
+            (click)="confirmApplicationPromotion(application.id)"
+            [disabled]="promotionActionApplicationId === application.id">
+            {{ promotionActionApplicationId === application.id ? 'Sending...' : 'Send Confirmation' }}
+          </button>
+          <button class="mini-btn start"
+            *ngIf="application.status === 'IN_PROMOTION' || application.status === 'CREATOR_CONFIRMED' || application.status === 'COMPLETED'"
+            (click)="createPromotionPostFromApplication(application)"
+            [disabled]="promotionActionApplicationId === application.id">
+            {{ promotionActionApplicationId === application.id ? 'Creating...' : 'Create Promotion Post' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <ng-template #noApplications>
+      <div class="market-state">You have not applied to any opportunity yet.</div>
+    </ng-template>
+  </article>
+
+  <article class="market-section glass-panel" *ngIf="isCreator">
+    <div class="section-head">
+      <h3>Direct Proposals For You</h3>
+      <span>{{ myReceivedDirectProposals.length }} received</span>
+    </div>
+    <div class="application-list" *ngIf="myReceivedDirectProposals.length > 0; else noReceivedProposals">
+      <div class="application-row" *ngFor="let proposal of myReceivedDirectProposals; trackBy: trackByProposal">
+        <div>
+          <strong>{{ proposal.title }}</strong>
+          <p class="proposal-subtitle">From &#64;{{ proposal.businessUsername || ('business-' + proposal.businessUserId) }}</p>
+          <p>{{ proposal.message }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.budget">Budget: {{ proposal.budget | number:'1.0-2' }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.promotionDetails">Promotion Details: {{ proposal.promotionDetails }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.promotionProductLink">Buy Link: {{ proposal.promotionProductLink }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.promotionBusinessPostId">Business Post ID: {{ proposal.promotionBusinessPostId }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.promotionProductImageUrl">
+            Product Image:
+            <a [href]="proposal.promotionProductImageUrl" target="_blank" rel="noopener noreferrer">{{ proposal.promotionProductImageUrl }}</a>
+          </p>
+          <p class="proposal-subtitle" *ngIf="proposal.creatorConfirmationNote">My Confirmation: {{ proposal.creatorConfirmationNote }}</p>
+        </div>
+        <div class="biz-actions">
+          <span class="status"
+            [class.pending]="proposal.status === 'PENDING'"
+            [class.accepted]="proposal.status === 'ACCEPTED'"
+            [class.rejected]="proposal.status === 'REJECTED'"
+            [class.promotion-requested]="proposal.status === 'PROMOTION_REQUESTED'"
+            [class.in-promotion]="proposal.status === 'IN_PROMOTION'"
+            [class.creator-confirmed]="proposal.status === 'CREATOR_CONFIRMED'"
+            [class.completed]="proposal.status === 'COMPLETED'">
+            {{ proposal.status }}
+          </span>
+          <button class="mini-btn accept" *ngIf="proposal.status === 'PENDING'" (click)="updateDirectProposalStatus(proposal.id, 'ACCEPTED')"
+            [disabled]="updatingDirectProposalStatusId === proposal.id">
+            Accept
+          </button>
+          <button class="mini-btn reject" *ngIf="proposal.status === 'PENDING'" (click)="updateDirectProposalStatus(proposal.id, 'REJECTED')"
+            [disabled]="updatingDirectProposalStatusId === proposal.id">
+            Reject
+          </button>
+          <button class="mini-btn accept"
+            *ngIf="proposal.status === 'PROMOTION_REQUESTED'"
+            (click)="acceptDirectProposalPromotion(proposal.id)"
+            [disabled]="promotionActionProposalId === proposal.id">
+            {{ promotionActionProposalId === proposal.id ? 'Accepting...' : 'Accept Promotion' }}
+          </button>
+          <button class="mini-btn complete"
+            *ngIf="proposal.status === 'IN_PROMOTION'"
+            (click)="confirmDirectProposalPromotion(proposal.id)"
+            [disabled]="promotionActionProposalId === proposal.id">
+            {{ promotionActionProposalId === proposal.id ? 'Sending...' : 'Send Confirmation' }}
+          </button>
+          <button class="mini-btn start"
+            *ngIf="proposal.status === 'IN_PROMOTION' || proposal.status === 'CREATOR_CONFIRMED' || proposal.status === 'COMPLETED'"
+            (click)="createPromotionPostFromProposal(proposal)"
+            [disabled]="promotionActionProposalId === proposal.id">
+            {{ promotionActionProposalId === proposal.id ? 'Creating...' : 'Create Promotion Post' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <ng-template #noReceivedProposals>
+      <div class="market-state">No direct business proposals yet.</div>
+    </ng-template>
+  </article>
+
+  <section class="business-layout" *ngIf="isBusiness">
+    <article class="market-section glass-panel">
+      <div class="section-head">
+        <h3>Create Opportunity</h3>
+      </div>
+      <div class="opportunity-form">
+        <input [(ngModel)]="opportunityForm.title" placeholder="Campaign title" />
+        <textarea [(ngModel)]="opportunityForm.description" placeholder="Campaign details and deliverables"></textarea>
+        <input [(ngModel)]="opportunityForm.creatorCategory" placeholder="Preferred creator category" />
+        <div class="budget-row">
+          <input type="number" [(ngModel)]="opportunityForm.minBudget" placeholder="Min budget" />
+          <input type="number" [(ngModel)]="opportunityForm.maxBudget" placeholder="Max budget" />
+        </div>
+        <button (click)="submitOpportunity()" [disabled]="creatingOpportunity">
+          {{ creatingOpportunity ? 'Publishing...' : 'Publish Opportunity' }}
+        </button>
+      </div>
+    </article>
+
+    <article class="market-section glass-panel">
+      <div class="section-head">
+        <h3>Direct Proposal</h3>
+      </div>
+      <div class="opportunity-form">
+        <input [(ngModel)]="directProposalForm.creatorUsername" placeholder="Creator username (without &#64;)" />
+        <input [(ngModel)]="directProposalForm.title" placeholder="Proposal title" />
+        <textarea [(ngModel)]="directProposalForm.message" placeholder="Campaign brief and expectations"></textarea>
+        <input type="number" [(ngModel)]="directProposalForm.budget" placeholder="Optional budget" />
+        <button (click)="submitDirectProposal()" [disabled]="sendingDirectProposal">
+          {{ sendingDirectProposal ? 'Sending...' : 'Send Direct Proposal' }}
+        </button>
+      </div>
+    </article>
+
+    <article class="market-section glass-panel">
+      <div class="section-head">
+        <h3>My Opportunities</h3>
+        <span>{{ myBusinessOpportunities.length }} total</span>
+      </div>
+      <div class="application-list" *ngIf="myBusinessOpportunities.length > 0; else noBusinessOpps">
+        <div class="application-row" *ngFor="let item of myBusinessOpportunities; trackBy: trackByOpportunity">
+          <div>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.creatorCategory || 'Any category' }} | {{ item.minBudget || 0 }} - {{ item.maxBudget || 0 }}</p>
+            <p class="proposal-subtitle">Views: {{ item.viewCount || 0 }} | Status: {{ item.status }}</p>
+          </div>
+          <div class="biz-actions">
+            <button class="mini-btn" (click)="viewApplications(item.id)">View Applications</button>
+            <button class="mini-btn danger" *ngIf="item.status === 'OPEN'" (click)="closeOpportunity(item.id)">Close</button>
+          </div>
+        </div>
+      </div>
+      <ng-template #noBusinessOpps>
+        <div class="market-state">No opportunities created yet.</div>
+      </ng-template>
+    </article>
+
+    <article class="market-section glass-panel roi-card">
+      <div class="section-head">
+        <h3>Business ROI Funnel</h3>
+        <button class="mini-btn" (click)="exportRoiCsv()" [disabled]="exportingRoi">
+          {{ exportingRoi ? 'Exporting...' : 'Export CSV' }}
+        </button>
+      </div>
+      <div class="roi-grid" *ngIf="businessRoiFunnel">
+        <div class="roi-item">
+          <span>Opportunities</span>
+          <strong>{{ businessRoiFunnel.opportunities || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Views</span>
+          <strong>{{ businessRoiFunnel.opportunityViews || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Applications</span>
+          <strong>{{ businessRoiFunnel.applications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Accepted Apps</span>
+          <strong>{{ businessRoiFunnel.acceptedApplications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Req Sent (Apps)</span>
+          <strong>{{ businessRoiFunnel.requestedPromotionApplications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Apps In Promotion</span>
+          <strong>{{ businessRoiFunnel.inPromotionApplications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Creator Confirmed</span>
+          <strong>{{ businessRoiFunnel.creatorConfirmedApplications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Apps Completed</span>
+          <strong>{{ businessRoiFunnel.completedApplications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Apps Paid</span>
+          <strong>{{ businessRoiFunnel.paidApplications || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Direct Sent</span>
+          <strong>{{ businessRoiFunnel.sentDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Direct Accepted</span>
+          <strong>{{ businessRoiFunnel.acceptedDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Req Sent (Direct)</span>
+          <strong>{{ businessRoiFunnel.requestedPromotionDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Direct In Promotion</span>
+          <strong>{{ businessRoiFunnel.inPromotionDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Direct Confirmed</span>
+          <strong>{{ businessRoiFunnel.creatorConfirmedDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Direct Completed</span>
+          <strong>{{ businessRoiFunnel.completedDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Direct Paid</span>
+          <strong>{{ businessRoiFunnel.paidDirectProposals || 0 }}</strong>
+        </div>
+        <div class="roi-item">
+          <span>Apply Rate</span>
+          <strong>{{ businessRoiFunnel.applyRate || 0 }}%</strong>
+        </div>
+        <div class="roi-item">
+          <span>Accept Rate</span>
+          <strong>{{ businessRoiFunnel.acceptRate || 0 }}%</strong>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <article class="market-section glass-panel" *ngIf="isBusiness">
+    <div class="section-head">
+      <h3>My Direct Proposals</h3>
+      <span>{{ mySentDirectProposals.length }} sent</span>
+    </div>
+    <div class="application-list" *ngIf="mySentDirectProposals.length > 0; else noSentProposals">
+      <div class="application-row" *ngFor="let proposal of mySentDirectProposals; trackBy: trackByProposal">
+        <div>
+          <strong>{{ proposal.title }}</strong>
+          <p class="proposal-subtitle">To &#64;{{ proposal.creatorUsername || ('creator-' + proposal.creatorUserId) }}</p>
+          <p>{{ proposal.message }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.promotionDetails">Promotion Details: {{ proposal.promotionDetails }}</p>
+          <p class="proposal-subtitle" *ngIf="proposal.creatorConfirmationNote">Creator Confirmation: {{ proposal.creatorConfirmationNote }}</p>
+        </div>
+        <div class="biz-actions">
+          <span class="status"
+            [class.pending]="proposal.status === 'PENDING'"
+            [class.accepted]="proposal.status === 'ACCEPTED'"
+            [class.rejected]="proposal.status === 'REJECTED'"
+            [class.promotion-requested]="proposal.status === 'PROMOTION_REQUESTED'"
+            [class.in-promotion]="proposal.status === 'IN_PROMOTION'"
+            [class.creator-confirmed]="proposal.status === 'CREATOR_CONFIRMED'"
+            [class.completed]="proposal.status === 'COMPLETED'">
+            {{ proposal.status }}
+          </span>
+          <button class="mini-btn start"
+            *ngIf="proposal.status === 'ACCEPTED'"
+            (click)="startDirectProposalPromotion(proposal.id)"
+            [disabled]="promotionActionProposalId === proposal.id">
+            {{ promotionActionProposalId === proposal.id ? 'Sending...' : 'Send Promotion Details' }}
+          </button>
+          <button class="mini-btn complete"
+            *ngIf="proposal.status === 'CREATOR_CONFIRMED'"
+            (click)="completeDirectProposalPromotion(proposal.id)"
+            [disabled]="promotionActionProposalId === proposal.id">
+            {{ promotionActionProposalId === proposal.id ? 'Completing...' : 'Complete + Pay' }}
+          </button>
+          <span class="proposal-subtitle" *ngIf="proposal.budget">Budget {{ proposal.budget | number:'1.0-2' }}</span>
+          <span class="proposal-subtitle" *ngIf="proposal.paymentStatus">Payment: {{ proposal.paymentStatus }}</span>
+        </div>
+      </div>
+    </div>
+    <ng-template #noSentProposals>
+      <div class="market-state">No direct proposals sent yet.</div>
+    </ng-template>
+  </article>
+
+  <article class="market-section glass-panel" *ngIf="isBusiness && selectedBusinessOpportunityId">
+    <div class="section-head">
+      <h3>Applications for Opportunity #{{ selectedBusinessOpportunityId }}</h3>
+      <span>{{ selectedOpportunityApplications.length }} applications</span>
+    </div>
+    <div class="application-list" *ngIf="selectedOpportunityApplications.length > 0; else noOppApplications">
+      <div class="application-row" *ngFor="let application of selectedOpportunityApplications; trackBy: trackByApplication">
+        <div>
+          <strong>&#64;{{ application.creatorUsername || ('creator-' + application.creatorId) }}</strong>
+          <p>{{ application.pitchMessage }}</p>
+          <p class="proposal-subtitle" *ngIf="application.promotionDetails">Promotion Details: {{ application.promotionDetails }}</p>
+          <p class="proposal-subtitle" *ngIf="application.creatorConfirmationNote">Creator Confirmation: {{ application.creatorConfirmationNote }}</p>
+        </div>
+        <div class="biz-actions">
+          <span class="status"
+            [class.pending]="application.status === 'PENDING'"
+            [class.accepted]="application.status === 'ACCEPTED'"
+            [class.rejected]="application.status === 'REJECTED'"
+            [class.promotion-requested]="application.status === 'PROMOTION_REQUESTED'"
+            [class.in-promotion]="application.status === 'IN_PROMOTION'"
+            [class.creator-confirmed]="application.status === 'CREATOR_CONFIRMED'"
+            [class.completed]="application.status === 'COMPLETED'">{{ application.status }}</span>
+          <button class="mini-btn accept" *ngIf="application.status === 'PENDING'" (click)="updateApplicationStatus(application.id, 'ACCEPTED')">Accept</button>
+          <button class="mini-btn reject" *ngIf="application.status === 'PENDING'" (click)="updateApplicationStatus(application.id, 'REJECTED')">Reject</button>
+          <button class="mini-btn start"
+            *ngIf="application.status === 'ACCEPTED'"
+            (click)="startApplicationPromotion(application.id)"
+            [disabled]="promotionActionApplicationId === application.id">
+            {{ promotionActionApplicationId === application.id ? 'Sending...' : 'Send Promotion Details' }}
+          </button>
+          <button class="mini-btn complete"
+            *ngIf="application.status === 'CREATOR_CONFIRMED'"
+            (click)="completeApplicationPromotion(application.id)"
+            [disabled]="promotionActionApplicationId === application.id">
+            {{ promotionActionApplicationId === application.id ? 'Completing...' : 'Complete + Pay' }}
+          </button>
+          <span class="proposal-subtitle" *ngIf="application.paymentStatus">Payment: {{ application.paymentStatus }}</span>
+        </div>
+      </div>
+    </div>
+    <ng-template #noOppApplications>
+      <div class="market-state">No applications for this opportunity yet.</div>
+    </ng-template>
+  </article>
+</section>
+
+<div class="apply-modal-wrap" *ngIf="showApplyModal" (click)="closeApplyModal()">
+  <div class="apply-modal glass-panel" (click)="$event.stopPropagation()">
+    <h3>Apply to "{{ applyTarget?.title }}"</h3>
+    <p>Share your pitch and why your audience is a strong match for this campaign.</p>
+    <textarea [(ngModel)]="pitchMessage" placeholder="Write your pitch..." rows="6"></textarea>
+    <div class="modal-actions">
+      <button class="mini-btn" (click)="closeApplyModal()">Cancel</button>
+      <button class="mini-btn accept" (click)="submitApplication()" [disabled]="applying || !pitchMessage.trim()">
+        {{ applying ? 'Submitting...' : 'Submit Application' }}
+      </button>
+    </div>
+  </div>
+</div>

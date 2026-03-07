@@ -1,0 +1,142 @@
+<div class="story-modal-overlay" *ngIf="isOpen" (click)="closeModal()">
+    <div class="story-modal-content" (click)="$event.stopPropagation()">
+
+        <!-- View Mode -->
+        <div class="story-viewer" *ngIf="mode === 'view' && activeStory">
+            <div class="story-viewer-header">
+                <div class="story-viewer-user">
+                    <img [src]="viewStoryProfilePic"
+                        [alt]="viewStoryUsername" class="story-viewer-avatar" />
+                    <span class="story-viewer-username">{{viewStoryUsername}}</span>
+                    <span class="story-viewer-time">
+                        {{ activeStory.createdAt | date:'shortTime' }}
+                    </span>
+                </div>
+                <button class="story-close-btn" (click)="closeModal()">&times;</button>
+            </div>
+
+            <div class="story-media-container">
+                <button class="story-nav-zone left" (click)="handleViewBack()" aria-label="Previous story"></button>
+                <img *ngIf="!viewStoryIsVideo" [src]="viewStoryMediaUrl" alt="Story" class="story-media" />
+                <video
+                    *ngIf="viewStoryIsVideo"
+                    [src]="viewStoryMediaUrl"
+                    class="story-media"
+                    autoplay
+                    muted
+                    playsinline
+                    controls
+                ></video>
+                <button class="story-nav-zone right" (click)="handleViewNext()" aria-label="Next story"></button>
+            </div>
+
+            <div class="story-progress-bar">
+                <div class="story-progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Create Mode -->
+        <div class="story-creator" *ngIf="mode === 'create'">
+            <div class="story-creator-header">
+                <h3>Create {{ createSubMode === 'POST' ? 'Post' : 'Story' }}</h3>
+                <button class="story-close-btn text-dark" (click)="closeModal()">&times;</button>
+            </div>
+
+            <!-- Toggle Switch -->
+            <div class="create-toggle-container">
+                <button class="toggle-btn" [class.active]="createSubMode === 'POST'" (click)="setCreateSubMode('POST')">
+                    Post
+                </button>
+                <button class="toggle-btn" [class.active]="createSubMode === 'STORY'" (click)="setCreateSubMode('STORY')">
+                    Story
+                </button>
+            </div>
+
+            <form (ngSubmit)="handleSubmit($event)" class="story-creator-form">
+                <div class="story-error" *ngIf="error">{{error}}</div>
+
+                <div class="form-group">
+                    <label>{{ createSubMode === 'POST' ? 'Upload Photo or Video' : 'Upload Image' }}</label>
+                    <input type="file" [attr.accept]="acceptedMediaTypes" (change)="handleFileChange($event)" style="padding: 8px;"
+                        required />
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST'">
+                    <label>Description</label>
+                    <textarea [(ngModel)]="description" name="description" placeholder="Write a caption..."
+                        class="form-textarea"></textarea>
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST'">
+                    <label>Hashtags</label>
+                    <input type="text" [(ngModel)]="hashtags" name="hashtags" placeholder="#tech #style..." />
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser">
+                    <label class="check-row">
+                        <input type="checkbox" [(ngModel)]="scheduleEnabled" name="scheduleEnabled" />
+                        <span>Schedule this post</span>
+                    </label>
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser && scheduleEnabled">
+                    <label>Publish At</label>
+                    <div class="schedule-row">
+                        <input type="date" [(ngModel)]="scheduleDate" name="scheduleDate" />
+                        <select [(ngModel)]="scheduleHour" name="scheduleHour">
+                            <option *ngFor="let hour of hourOptions" [value]="hour">{{ hour }}</option>
+                        </select>
+                        <select [(ngModel)]="scheduleMinute" name="scheduleMinute">
+                            <option *ngFor="let minute of minuteOptions" [value]="minute">{{ minute }}</option>
+                        </select>
+                        <select [(ngModel)]="scheduleMeridiem" name="scheduleMeridiem">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser">
+                    <label class="check-row">
+                        <input type="checkbox" [(ngModel)]="addCollaborator" name="addCollaborator" />
+                        <span>Add co-author collaborator</span>
+                    </label>
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser && addCollaborator">
+                    <label>Collaborator Username</label>
+                    <input type="text" [(ngModel)]="collaboratorUsername" name="collaboratorUsername"
+                        placeholder="creator_username" />
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser">
+                    <label>Series / Playlist Name (optional)</label>
+                    <input type="text" [(ngModel)]="seriesName" name="seriesName" placeholder="Travel Vlogs" />
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser && seriesName.trim()">
+                    <label>Series Order</label>
+                    <input type="number" min="0" [(ngModel)]="seriesOrder" name="seriesOrder" />
+                </div>
+
+                <div class="form-group" *ngIf="createSubMode === 'STORY' && isCreatorUser">
+                    <label class="check-row">
+                        <input type="checkbox" [(ngModel)]="subscriberOnlyStory" name="subscriberOnlyStory" />
+                        <span>Subscribers-only story (exclusive)</span>
+                    </label>
+                </div>
+
+                <div class="story-preview-box" [class.post-preview]="createSubMode === 'POST'">
+                    <img *ngIf="mediaUrl && mediaType !== 'VIDEO'" [src]="mediaUrl" alt="Preview" />
+                    <video *ngIf="mediaUrl && mediaType === 'VIDEO'" [src]="mediaUrl" class="preview-video" muted autoplay loop playsinline controls></video>
+                    <span *ngIf="!mediaUrl">{{ createSubMode === 'POST' ? 'Photo / Video Preview' : 'Image Preview' }}</span>
+                </div>
+
+                <button type="submit" class="story-submit-btn" [disabled]="loading || !mediaUrl">
+                    {{ loading ? 'Posting...' : 'Share ' + (createSubMode === 'POST' ? 'Post' : 'Story') }}
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>

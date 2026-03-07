@@ -1,0 +1,66 @@
+<div class="auth-container">
+    <div class="glass-panel auth-panel">
+        <h1 class="auth-logo logo-gradient-text">RevConnect</h1>
+        <p class="auth-subtitle">Sign up to see photos and videos from your friends.</p>
+
+        <div *ngIf="error" style="color: #ef4444; margin-bottom: 16px; font-size: 14px;">
+            {{ error }}
+        </div>
+        <div *ngIf="message" style="color: #10b981; margin-bottom: 16px; font-size: 14px;">
+            {{ message }}
+        </div>
+
+        <form *ngIf="step === 'FORM'" (ngSubmit)="handleRegister($event)" class="auth-form">
+            <input type="text" name="name" placeholder="Full Name" class="auth-input" [(ngModel)]="formData.name"
+                required />
+            <input type="text" name="username" placeholder="Username" class="auth-input" [(ngModel)]="formData.username"
+                required />
+            <input type="email" name="email" placeholder="Email Address" class="auth-input" [(ngModel)]="formData.email"
+                required />
+            <div class="password-wrap">
+                <input [type]="showPassword ? 'text' : 'password'" name="password" placeholder="Password" class="auth-input"
+                    [(ngModel)]="formData.password" required minlength="8" />
+                <button type="button" class="password-toggle" (click)="showPassword = !showPassword">
+                    {{ showPassword ? '??' : '??' }}
+                </button>
+            </div>
+            <div class="password-wrap">
+                <input [type]="showConfirmPassword ? 'text' : 'password'" name="confirmPassword" placeholder="Confirm Password" class="auth-input"
+                    [(ngModel)]="formData.confirmPassword" required minlength="8" />
+                <button type="button" class="password-toggle" (click)="showConfirmPassword = !showConfirmPassword">
+                    {{ showConfirmPassword ? '??' : '??' }}
+                </button>
+            </div>
+            <small style="color: var(--text-secondary); margin-top: -8px; margin-bottom: 4px; display: block;">
+                Password must be at least 8 characters.
+            </small>
+
+            <select name="role" class="auth-input" [(ngModel)]="formData.role" required
+                style="background-color: rgba(255, 255, 255, 0.1); color: white;">
+                <option value="USER" style="color: black;">General User</option>
+                <option value="CREATER" style="color: black;">Content Creator</option>
+                <option value="Business_Account_User" style="color: black;">Business Profile</option>
+            </select>
+
+            <button type="submit" class="auth-btn" [disabled]="loading">
+                {{ loading ? 'Sending OTP...' : 'Sign Up' }}
+            </button>
+        </form>
+
+        <form *ngIf="step === 'OTP'" (ngSubmit)="handleVerifyOtp($event)" class="auth-form">
+            <input type="email" name="otpEmailPreview" class="auth-input" [value]="formData.email" disabled />
+            <input type="text" name="registrationOtp" placeholder="Enter OTP" class="auth-input"
+                [(ngModel)]="registrationOtp" required maxlength="6" />
+            <button type="submit" class="auth-btn" [disabled]="loading">
+                {{ loading ? 'Verifying...' : 'Verify OTP & Register' }}
+            </button>
+            <button type="button" class="auth-btn secondary-btn" [disabled]="loading" (click)="resendRegistrationOtp()">
+                Resend OTP
+            </button>
+        </form>
+
+        <div class="auth-footer" style="margin-top: 24px;">
+            <p>Have an account? <a routerLink="/login" class="auth-link">Log in</a></p>
+        </div>
+    </div>
+</div>

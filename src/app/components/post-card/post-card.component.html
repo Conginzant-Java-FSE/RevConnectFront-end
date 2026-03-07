@@ -1,0 +1,128 @@
+<div class="glass-panel post-card animate-fade-in" *ngIf="post && !isPostRemoved">
+    <div class="post-header">
+        <div class="post-user-info">
+            <img [src]="post.authorProfilePicture || '/assets/default-avatar.svg'" [alt]="post.authorUsername || 'User'"
+                class="post-avatar" />
+            <span class="post-username">{{ post.authorUsername }}</span>
+            <span class="post-time">- {{ post.createdAt | date:'shortDate' }}</span>
+        </div>
+        <div class="post-options-wrap" *ngIf="canManagePost">
+            <button class="post-options" (click)="togglePostOptions($event)">...</button>
+            <div class="post-options-menu" *ngIf="showPostOptionsMenu" (click)="$event.stopPropagation()">
+                <button class="post-option-item" (click)="startEditPost($event)">Edit post</button>
+                <button class="post-option-item danger" (click)="handleDeletePost($event)"
+                    [disabled]="isDeletingPost">{{ isDeletingPost ? 'Deleting...' : 'Delete post' }}</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-image-container" *ngIf="post.mediaUrl">
+        <img *ngIf="!isVideoPost" [src]="post.mediaUrl" alt="Post Content" class="post-image"
+            (dblclick)="handleLikeToggle()" />
+        <video *ngIf="isVideoPost" #postVideo class="post-video" [src]="post.mediaUrl" muted loop playsinline
+            preload="metadata" (dblclick)="handleLikeToggle()" (loadeddata)="handleVideoReady()" (play)="handleVideoPlay()"
+            (pause)="handleVideoPause()" (ended)="handleVideoEnded()" (error)="handleVideoError()"></video>
+        <div *ngIf="mediaLoadError" class="media-error">{{ mediaLoadError }}</div>
+    </div>
+
+    <div class="post-actions">
+        <div class="action-buttons">
+            <button class="action-btn" [class.liked]="isLiked" (click)="handleLikeToggle()">
+                {{ isLiked ? '♥' : '♡' }}
+            </button>
+            <button class="action-btn" (click)="showComments = !showComments">💬</button>
+            <button class="action-btn" (click)="openShareModal()">↗</button>
+        </div>
+        <button class="action-btn bookmark-btn" [class.liked]="isSaved" (click)="handleSaveToggle()">🔖</button>
+    </div>
+
+    <div class="action-counters">
+        <span>{{ likeCount }} likes</span>
+        <span>{{ comments.length }} comments</span>
+        <span>{{ saveCount }} saves</span>
+        <span>{{ shareCount }} shares</span>
+    </div>
+
+    <div class="post-footer">
+        <div class="post-likes">{{ likeCount }} likes</div>
+        <div class="post-caption">
+            <span class="post-username">{{ post.authorUsername }}</span> {{ post.content }}
+        </div>
+        <div class="post-caption" *ngIf="post.collaboratorUsername">
+            Co-authored with <span class="post-username">&#64;{{ post.collaboratorUsername }}</span>
+            <span *ngIf="post.collabAccepted === false">(pending approval)</span>
+        </div>
+        <div class="post-caption" *ngIf="post.seriesName">
+            Series: <span class="post-username">{{ post.seriesName }}</span>
+            <span *ngIf="post.seriesOrder !== null && post.seriesOrder !== undefined">#{{ post.seriesOrder }}</span>
+        </div>
+
+        <div class="post-comments-view" *ngIf="comments.length > 0 && !showComments" (click)="showComments = true">
+            View all {{ comments.length }} comments
+        </div>
+        <div class="post-comments-view" *ngIf="comments.length > 0 && showComments" (click)="showComments = false">
+            Hide comments
+        </div>
+
+        <div class="comments-list" *ngIf="showComments">
+            <div *ngFor="let comment of comments" class="comment-item">
+                <span class="post-username">{{ comment.username }}</span>
+                <span class="comment-text">{{ comment.content }}</span>
+            </div>
+        </div>
+
+        <div class="post-add-comment">
+            <input type="text" placeholder="Add a comment... (you can mention: @username)" class="comment-input"
+                [(ngModel)]="newComment" (keyup.enter)="handleCommentSubmit()" [disabled]="isSubmitting" />
+            <button class="post-btn" (click)="handleCommentSubmit()" [disabled]="!newComment.trim() || isSubmitting">
+                Post
+            </button>
+        </div>
+        <div class="post-error-text" *ngIf="postActionError">{{ postActionError }}</div>
+    </div>
+</div>
+
+<div class="share-modal-wrap" *ngIf="isEditingPost" (click)="closeEditPostModal()">
+    <div class="share-modal glass-panel" (click)="$event.stopPropagation()">
+        <h3>Edit Post</h3>
+        <p>Update your post caption.</p>
+        <textarea class="share-note-input" [(ngModel)]="editPostContent" rows="4"
+            placeholder="Write caption..."></textarea>
+        <div class="share-actions">
+            <button class="post-btn" (click)="closeEditPostModal()">Cancel</button>
+            <button class="post-btn" (click)="savePostEdit()" [disabled]="isUpdatingPost">
+                {{ isUpdatingPost ? 'Saving...' : 'Save' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="share-modal-wrap" *ngIf="showShareModal" (click)="closeShareModal()">
+    <div class="share-modal glass-panel" (click)="$event.stopPropagation()">
+        <h3>Share Post</h3>
+        <p>Select your connections and send this post to chat.</p>
+
+        <div class="share-list">
+            <label *ngFor="let connection of shareConnections" class="share-user-row">
+                <input type="checkbox" [checked]="connection.selected"
+                    (change)="toggleConnectionSelection(connection, $any($event.target).checked)" />
+                <span class="share-user-name">&#64;{{ connection.username }}</span>
+            </label>
+            <div class="share-empty" *ngIf="shareConnections.length === 0">
+                No connections found yet.
+            </div>
+        </div>
+
+        <textarea class="share-note-input" [(ngModel)]="shareMessage" rows="3"
+            placeholder="Add a note (optional)"></textarea>
+
+        <div class="share-feedback" *ngIf="shareFeedback">{{ shareFeedback }}</div>
+
+        <div class="share-actions">
+            <button class="post-btn" (click)="closeShareModal()">Cancel</button>
+            <button class="post-btn" *ngIf="selectedShareCount > 0" (click)="submitShare()" [disabled]="isSharing">
+                {{ isSharing ? 'Sharing...' : 'Share to Chat' }}
+            </button>
+        </div>
+    </div>
+</div>

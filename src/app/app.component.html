@@ -1,0 +1,59 @@
+<div class="app-container">
+    <!-- Global SVG Definitions for glowing gradients used by Sidebar and TabBar icons -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" class="hidden-svg-defs" style="position: absolute;">
+        <defs>
+            <linearGradient id="hero-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#e94560" />
+                <stop offset="50%" stop-color="#f5a623" />
+                <stop offset="100%" stop-color="#a855f7" />
+            </linearGradient>
+            <linearGradient id="blue-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#60a5fa" />
+                <stop offset="100%" stop-color="#3b82f6" />
+            </linearGradient>
+            <linearGradient id="teal-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2dd4bf" />
+                <stop offset="100%" stop-color="#14b8a6" />
+            </linearGradient>
+            <linearGradient id="red-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f87171" />
+                <stop offset="100%" stop-color="#e94560" />
+            </linearGradient>
+            <linearGradient id="blue-purple-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3b82f6" />
+                <stop offset="100%" stop-color="#a855f7" />
+            </linearGradient>
+            <linearGradient id="pink-purple-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#e94560" />
+                <stop offset="100%" stop-color="#a855f7" />
+            </linearGradient>
+            <linearGradient id="silver-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#94a3b8" />
+                <stop offset="100%" stop-color="#e2e8f0" />
+            </linearGradient>
+            <linearGradient id="mint-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#34d399" />
+                <stop offset="100%" stop-color="#06b6d4" />
+            </linearGradient>
+            <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f59e0b" />
+                <stop offset="100%" stop-color="#f97316" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <ng-container *ngIf="{ isAuth: authService.isAuthenticated$ | async } as auth">
+        <app-sidebar *ngIf="auth.isAuth && !hideLayout" (onOpenCreateModal)="openCreateModal()"></app-sidebar>
+
+        <main [ngClass]="(auth.isAuth && !hideLayout) ? 'main-content' : 'auth-main-content'">
+            <router-outlet></router-outlet>
+        </main>
+
+        <app-right-panel *ngIf="auth.isAuth && !hideLayout"></app-right-panel>
+
+        <app-tabbar *ngIf="auth.isAuth && !hideLayout" (onOpenCreateModal)="openCreateModal()"></app-tabbar>
+
+        <app-create-modal *ngIf="auth.isAuth && !hideLayout" [isOpen]="isCreateModalOpen" mode="create"
+            (onClose)="isCreateModalOpen = false"></app-create-modal>
+    </ng-container>
+</div>

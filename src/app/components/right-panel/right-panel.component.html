@@ -1,0 +1,57 @@
+<aside class="right-panel">
+
+    <!-- Current User Mini Profile -->
+    <div class="mini-profile" (click)="goToMyProfile()">
+        <div class="avatar-lg">
+            <img *ngIf="user?.userProfile?.profilepicURL || user?.creatorProfile?.profilepicURL || user?.businessProfile?.logoUrl"
+                [src]="user?.userProfile?.profilepicURL || user?.creatorProfile?.profilepicURL || user?.businessProfile?.logoUrl"
+                [alt]="user?.username" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
+        </div>
+        <div class="profile-info">
+            <h4>{{user?.username || 'user'}}</h4>
+            <span>{{user?.userProfile?.bio ? (user.userProfile.bio | slice:0:20) : (user?.businessProfile?.description ?
+                (user.businessProfile.description | slice:0:20) : 'Current User')}}</span>
+        </div>
+        <button class="text-btn" (click)="goToMyProfile(); $event.stopPropagation()">View</button>
+    </div>
+
+    <!-- Suggested Users -->
+    <div class="suggestions-container">
+        <div class="suggestions-header">
+            <h4>Suggested for you</h4>
+            <button class="text-btn-muted">See All</button>
+        </div>
+
+        <div *ngFor="let suggestion of suggestions; let i = index" class="suggestion-item"
+            (click)="goToProfile(suggestion.username)" style="cursor: pointer;">
+            <div class="suggestion-user">
+                <div class="avatar-sm">
+                    <img *ngIf="suggestion?.userProfile?.profilepicURL || suggestion?.creatorProfile?.profilepicURL || suggestion?.businessProfile?.logoUrl"
+                        [src]="suggestion?.userProfile?.profilepicURL || suggestion?.creatorProfile?.profilepicURL || suggestion?.businessProfile?.logoUrl"
+                        [alt]="suggestion.username"
+                        style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
+                </div>
+                <div class="suggestion-info">
+                    <span class="suggestion-name">{{suggestion?.username}}</span>
+                    <span class="suggestion-reason">Suggested</span>
+                </div>
+            </div>
+            <button class="text-btn" [ngClass]="{'pending': suggestion?.status === 'Pending', 'following': suggestion?.status === 'Following'}"
+                [disabled]="suggestion?.status !== 'Follow'" (click)="connect(suggestion?.id, i, $event)">
+                {{ suggestion.status }}
+            </button>
+        </div>
+
+        <div *ngIf="suggestions.length === 0" class="suggestion-item" style="color: var(--text-muted)">
+            <span style="font-size: 13px;">No other users found yet.</span>
+        </div>
+    </div>
+
+    <!-- Footer Links -->
+    <div class="footer-links">
+        <span>About • Help • Press • API • Jobs • Privacy • Terms • Locations • Language</span>
+        <br /><br />
+        <span>© 2026 REVCONNECT INSTAGRAM CLONE</span>
+    </div>
+
+</aside>

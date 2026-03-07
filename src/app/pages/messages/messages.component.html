@@ -1,0 +1,144 @@
+<div class="messages-container">
+    <div class="messages-header">
+        <div class="header-copy">
+            <h2>Messages</h2>
+            <p>Direct conversations with creators, businesses, and friends. {{ unreadThreadCount }} unread chats.</p>
+        </div>
+        <button class="header-close-btn" routerLink="/home" aria-label="Close messages">Close</button>
+    </div>
+
+    <div class="messages-content">
+        <div class="messages-list-sidebar">
+            <div class="search-messages">
+                <input type="text" placeholder="Search users to message..." [(ngModel)]="searchQuery"
+                    (ngModelChange)="handleSearch()" />
+            </div>
+
+            <div class="contacts-list">
+                <ng-container *ngIf="searchQuery.length > 0; else partnersList">
+                    <div class="search-results-section">
+                        <span class="section-label">Search Results</span>
+                        <div *ngFor="let result of searchResults" class="message-thread"
+                            (click)="handleSelectContact(result)">
+                            <div class="thread-avatar">
+                                {{ result.username.charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="thread-preview">
+                                <span class="thread-name">{{ result.username }}</span>
+                                <span class="thread-text">Tap to start chatting</span>
+                            </div>
+                        </div>
+                        <div *ngIf="searchResults.length === 0" class="empty-search">No users found.</div>
+                    </div>
+                </ng-container>
+
+                <ng-template #partnersList>
+                    <div *ngFor="let partner of partners" class="message-thread"
+                        [class.unread]="(partner.unreadCount || 0) > 0"
+                        [class.active]="activeContact?.id === partner.id" (click)="handleSelectContact(partner)">
+                        <div class="thread-avatar">
+                            <img *ngIf="partner.profilePicUrl" [src]="partner.profilePicUrl" [alt]="partner.username" />
+                            <span *ngIf="!partner.profilePicUrl">{{ partner.username.charAt(0).toUpperCase() }}</span>
+                        </div>
+                        <div class="thread-preview">
+                            <span class="thread-name">
+                                {{ partner.username }}
+                                <span class="thread-unread-dot" *ngIf="(partner.unreadCount || 0) > 0"></span>
+                            </span>
+                            <span class="thread-text">
+                                {{ (partner.unreadCount || 0) > 0 ? (partner.unreadCount + ' unread messages') : 'Click to view conversation' }}
+                            </span>
+                        </div>
+                    </div>
+                </ng-template>
+
+                <div *ngIf="!searchQuery && partners.length === 0" class="empty-state-text">
+                    <span class="empty-chip">No chats yet</span>
+                    <p>Search for a user to start a conversation.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="active-message-view">
+            <div *ngIf="!activeContact" class="active-message-header empty">
+                <div class="empty-chat-state">
+                    <h3>Select a conversation</h3>
+                    <p>Pick a contact and start messaging in real time.</p>
+                </div>
+            </div>
+
+            <ng-container *ngIf="activeContact">
+                <div class="active-message-header">
+                    <div class="chat-header-info">
+                        <div class="thread-avatar small">
+                            <img *ngIf="activeContact.profilePicUrl" [src]="activeContact.profilePicUrl"
+                                [alt]="activeContact.username" />
+                            <span *ngIf="!activeContact.profilePicUrl">{{ activeContact.username.charAt(0).toUpperCase() }}</span>
+                        </div>
+                        <h3>{{ activeContact.username }}</h3>
+                    </div>
+                </div>
+
+                <div class="chat-history">
+                    <div *ngIf="loading && conversation.length === 0" class="chat-loading">Loading messages...</div>
+
+                    <ng-container *ngIf="conversation.length > 0">
+                        <div *ngFor="let msg of conversation" class="chat-bubble-wrapper"
+                            [class.sent]="msg.senderId === user?.id" [class.received]="msg.senderId !== user?.id">
+                            <div *ngIf="editingMsgId === msg.id; else displayMsg" class="chat-edit-wrapper">
+                                <input type="text" [(ngModel)]="editContent" class="edit-message-input" autofocus
+                                    (keydown)="onEditKeyDown($event, msg.id)" />
+                                <div class="edit-actions">
+                                    <button class="btn-save-inline" (click)="handleEditMessage(msg.id)">Save</button>
+                                    <button class="btn-cancel-inline" (click)="editingMsgId = null">Cancel</button>
+                                </div>
+                            </div>
+
+                            <ng-template #displayMsg>
+                                <button *ngIf="isSharedPostMessage(msg)" type="button" class="shared-post-card"
+                                    (click)="openSharedPost(msg)">
+                                    <div class="shared-post-media" *ngIf="msg.sharedPostMediaUrl">
+                                        <img *ngIf="!isSharedPostVideo(msg)" [src]="msg.sharedPostMediaUrl" alt="Shared post preview" />
+                                        <video *ngIf="isSharedPostVideo(msg)" [src]="msg.sharedPostMediaUrl" muted playsinline preload="metadata"></video>
+                                    </div>
+                                    <div class="shared-post-copy">
+                                        <span class="shared-post-eyebrow">Shared Post</span>
+                                        <strong>&#64;{{ msg.sharedPostAuthorUsername }}</strong>
+                                        <p *ngIf="msg.sharedPostDescription">{{ msg.sharedPostDescription }}</p>
+                                        <span class="shared-post-link">Tap to view original post</span>
+                                    </div>
+                                </button>
+
+                                <div *ngIf="hasMessageText(msg)" class="chat-bubble">
+                                    {{ msg.content }}
+                                </div>
+
+                                <div *ngIf="msg.senderId === user?.id" class="chat-bubble-actions">
+                                    <button *ngIf="hasMessageText(msg)" (click)="startEdit(msg)">Edit</button>
+                                    <button (click)="handleDeleteMessage(msg.id)">Delete</button>
+                                </div>
+
+                                <span class="chat-time">
+                                    {{ msg.timestamp | date:'shortTime' }}
+                                </span>
+                            </ng-template>
+                        </div>
+                    </ng-container>
+
+                    <div *ngIf="conversation.length === 0 && !loading" class="chat-empty-convo">
+                        Say hi to {{ activeContact.username }}!
+                    </div>
+
+                    <div #messagesEnd></div>
+                </div>
+
+                <form class="chat-input-area" (ngSubmit)="handleSendMessage($event)">
+                    <input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" name="newMessage" />
+                    <button type="submit" [disabled]="!newMessage.trim()" class="send-btn">
+                        Send
+                    </button>
+                </form>
+            </ng-container>
+        </div>
+    </div>
+</div>

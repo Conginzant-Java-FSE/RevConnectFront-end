@@ -1,0 +1,80 @@
+/* Reusing auth styles, we can just leave this empty or import the global auth classes if not global. 
+Assuming auth-container and glass-panel are global since login/register use them and they don't seem to import it locally.
+If they do import locally, we copy the CSS here. Wait, checking register component - it has its own CSS file. Let's redirect to global if possible, or leave empty if classes are global. Actually registering component had styleUrl: './register.component.css'. I'll copy the basic flexbox styles to be safe. */
+
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-panel {
+    width: 100%;
+    max-width: 400px;
+    padding: 40px;
+    text-align: center;
+}
+
+.auth-logo {
+    font-size: 36px;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+}
+
+.auth-subtitle {
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: var(--brand-pink);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(233, 69, 96, 0.2);
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--brand-gradient);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+}
+
+.auth-btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.auth-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
