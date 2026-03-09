@@ -1,4 +1,4 @@
-﻿<div class="profile-container" [class.modal-open]="isProductModalOpen || isAddProductModalOpen">
+﻿﻿<div class="profile-container" [class.modal-open]="isProductModalOpen || isAddProductModalOpen">
   <div *ngIf="loading" class="loading-state">
     <div class="spinner"></div>
   </div>
@@ -58,8 +58,14 @@
           {{ followButtonLabel }}
         </button>
 
-        <a *ngIf="isOwnProfile" routerLink="/saved" class="saved-link-icon" title="Saved posts">&#128278;</a>
-        <a *ngIf="isOwnProfile" routerLink="/profile/preferences" class="saved-link-icon" title="Profile preferences">&#9881;</a>
+        <div *ngIf="isOwnProfile" class="profile-action-row">
+          <a routerLink="/profile/preferences" class="profile-action-btn">
+            Edit profile
+          </a>
+          <button type="button" class="profile-action-btn" (click)="openProfileShareModal()">
+            Share profile
+          </button>
+        </div>
       </div>
 
       <h3 class="profile-fullname">{{ fullName }}</h3>
@@ -145,11 +151,42 @@
         Products
         <span class="tab-count" *ngIf="products.length">{{ products.length }}</span>
       </button>
-      <button class="tab-btn" [class.active]="activeTab === 'POSTS'" (click)="activeTab = 'POSTS'">Posts</button>
+      <button class="tab-btn" [class.active]="activeTab === 'POSTS'" (click)="activeTab = 'POSTS'">
+        Posts
+      </button>
+      <button *ngIf="isOwnProfile" class="tab-btn" [class.active]="activeTab === 'SAVED'" (click)="activeTab = 'SAVED'">
+        Saved
+        <span class="tab-count" *ngIf="savedPostsProfile.length">{{ savedPostsProfile.length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'TAGGED'" (click)="activeTab = 'TAGGED'">
+        Tagged
+        <span class="tab-count" *ngIf="taggedPosts.length">{{ taggedPosts.length }}</span>
+      </button>
       <button *ngIf="isOwnProfile" class="btn-add-product" (click)="openAddProductModal()">Add Product</button>
     </div>
 
-    <h3 *ngIf="!isBusinessProfile" class="section-title">{{ isOwnProfile ? 'My Posts' : 'Posts' }}</h3>
+    <div *ngIf="!isBusinessProfile" class="profile-media-tabs">
+      <button class="media-tab-btn" [class.active]="activeTab === 'POSTS'" (click)="activeTab = 'POSTS'">
+        <svg viewBox="0 0 24 24" fill="none" class="media-tab-icon">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+        </svg>
+      </button>
+      <button *ngIf="isOwnProfile" class="media-tab-btn" [class.active]="activeTab === 'SAVED'" (click)="activeTab = 'SAVED'">
+        <svg viewBox="0 0 24 24" fill="none" class="media-tab-icon">
+          <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"></path>
+        </svg>
+      </button>
+      <button class="media-tab-btn" [class.active]="activeTab === 'TAGGED'" (click)="activeTab = 'TAGGED'">
+        <svg viewBox="0 0 24 24" fill="none" class="media-tab-icon">
+          <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+          <circle cx="12" cy="10" r="3.5"></circle>
+          <path d="M8 20c.7-2.5 2.2-4 4-4s3.3 1.5 4 4"></path>
+        </svg>
+      </button>
+    </div>
 
     <ng-container
       *ngIf="(userProfile?.userProfile?.isPublic === false || userProfile?.creatorProfile?.isPublic === false || userProfile?.businessProfile?.isPublic === false || userProfile?.isPublic === false) && !isOwnProfile && posts.length === 0 && products.length === 0; else contentView"
@@ -161,12 +198,13 @@
     </ng-container>
 
     <ng-template #contentView>
-      <div *ngIf="activeTab === 'POSTS'" class="profile-grid" [ngClass]="isCreatorProfile ? creatorGridClass : ''">
-        <ng-container *ngIf="posts.length > 0; else emptyPosts">
-          <div *ngFor="let post of posts"
+      <div *ngIf="activeTab !== 'PRODUCTS'" class="profile-grid" [ngClass]="isCreatorProfile ? creatorGridClass : ''">
+        <ng-container *ngIf="activeGridPosts.length > 0; else emptyPosts">
+          <div *ngFor="let post of activeGridPosts"
                class="profile-grid-item animate-fade-in"
                [attr.id]="'post-' + (post.postId || post.id)"
-               [class.post-focus-target]="highlightedPostId === (post.postId || post.id)">
+               [class.post-focus-target]="highlightedPostId === (post.postId || post.id)"
+               (click)="openPostPreview(post)">
             <div *ngIf="canManageCreatorPosts" class="creator-post-controls">
               <button class="pin-btn" [class.pinned]="post.isPinned" (click)="togglePinPost(post, $event)">
                 {{ post.isPinned ? 'Unpin' : 'Pin' }}
@@ -178,12 +216,42 @@
                 Posted
               </span>
             </div>
-            <app-post-card [post]="post"></app-post-card>
+            <img *ngIf="!isVideoPost(post)" [src]="getPostPreviewMedia(post).url" [alt]="post.authorUsername + ' post'" class="profile-post-thumb" />
+            <video *ngIf="isVideoPost(post)" [src]="getPostPreviewMedia(post).url" class="profile-post-thumb" muted playsinline preload="metadata"></video>
+            <div class="profile-post-overlay">
+              <span>{{ post.likeCount || 0 }} likes</span>
+              <span>{{ post.commentCount || 0 }} comments</span>
+            </div>
+            <span class="post-type-badge" *ngIf="isVideoPost(post)">VIDEO</span>
+            <span class="post-type-badge multi" *ngIf="postHasMultipleMedia(post) && !isVideoPost(post)">MULTI</span>
           </div>
         </ng-container>
         <ng-template #emptyPosts>
-          <div class="empty-state">
-            {{ isOwnProfile ? "You haven't posted anything yet. Check out the Create tab to get started!" : "No posts yet." }}
+          <div class="share-photos-empty" *ngIf="activeTab === 'POSTS'">
+            <div class="share-photos-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7z"></path>
+                <circle cx="12" cy="12" r="3.2"></circle>
+                <path d="M16.8 7.2h.01"></path>
+              </svg>
+            </div>
+            <h4>Share Photos</h4>
+            <p>When you share photos, they will appear on your profile.</p>
+            <button type="button" class="share-first-photo-link" (click)="openCreatePostFromProfile($event)">Share your first photo</button>
+          </div>
+          <div class="empty-state" *ngIf="activeTab === 'SAVED'">
+            No saved posts yet.
+          </div>
+          <div class="share-photos-empty" *ngIf="activeTab === 'TAGGED'">
+            <div class="share-photos-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+                <circle cx="12" cy="10" r="3.2"></circle>
+                <path d="M8.2 19c.7-2.5 2.2-4 3.8-4s3.1 1.5 3.8 4"></path>
+              </svg>
+            </div>
+            <h4>Tagged Posts</h4>
+            <p>Posts where this user is tagged will appear here.</p>
           </div>
         </ng-template>
       </div>
@@ -337,26 +405,61 @@
         <button class="modal-close-btn-small" (click)="closeFollowListModal()">x</button>
       </div>
 
+      <div class="follow-search-wrap">
+        <input
+          type="text"
+          [(ngModel)]="followListSearchQuery"
+          class="follow-search-input"
+          placeholder="Search"
+        />
+      </div>
+
       <div class="follow-list-body" *ngIf="!loadingFollowList; else followListLoading">
         <ng-container *ngIf="activeFollowListType === 'followers'">
-          <div class="follow-row" *ngFor="let user of followersList">
-            <a [routerLink]="['/profile', user.followerUsername]" (click)="closeFollowListModal()">
-              {{ user.followerUsername }}
+          <div class="follow-row" *ngFor="let user of filteredFollowersList">
+            <a [routerLink]="['/profile', user.followerUsername]" (click)="closeFollowListModal()" class="follow-user">
+              <div class="follow-avatar">
+                <img *ngIf="user.avatarUrl" [src]="user.avatarUrl" [alt]="user.followerUsername" />
+                <span *ngIf="!user.avatarUrl">{{ getInitial(user.followerUsername) }}</span>
+              </div>
+              <div class="follow-user-copy">
+                <span class="follow-user-name">{{ user.followerUsername }}</span>
+                <span class="follow-user-sub">{{ user.displayName || user.followerUsername }}</span>
+              </div>
             </a>
+            <ng-container *ngIf="isOwnProfile">
+              <div class="follow-action-stack" *ngIf="user.confirmUnfollow; else followerMainAction">
+                <button class="follow-action-btn danger" (click)="toggleFollowerRelation(user)">Unfollow</button>
+                <button class="follow-action-btn muted" (click)="cancelFollowerUnfollow(user)">Cancel</button>
+              </div>
+              <ng-template #followerMainAction>
+                <button class="follow-action-btn" [class.following]="user.relationStatus === 'Following'"
+                  [class.pending]="user.relationStatus === 'Pending'" (click)="toggleFollowerRelation(user)">
+                  {{ user.relationStatus }}
+                </button>
+              </ng-template>
+            </ng-container>
           </div>
-          <div class="empty-state" *ngIf="followersList.length === 0">No followers yet.</div>
+          <div class="empty-state" *ngIf="filteredFollowersList.length === 0">No followers found.</div>
         </ng-container>
 
         <ng-container *ngIf="activeFollowListType === 'following'">
-          <div class="follow-row" *ngFor="let user of followingList">
-            <a [routerLink]="['/profile', user.followingUsername]" (click)="closeFollowListModal()">
-              {{ user.followingUsername }}
+          <div class="follow-row" *ngFor="let user of filteredFollowingList">
+            <a [routerLink]="['/profile', user.followingUsername]" (click)="closeFollowListModal()" class="follow-user">
+              <div class="follow-avatar">
+                <img *ngIf="user.avatarUrl" [src]="user.avatarUrl" [alt]="user.followingUsername" />
+                <span *ngIf="!user.avatarUrl">{{ getInitial(user.followingUsername) }}</span>
+              </div>
+              <div class="follow-user-copy">
+                <span class="follow-user-name">{{ user.followingUsername }}</span>
+                <span class="follow-user-sub">{{ user.displayName || user.followingUsername }}</span>
+              </div>
             </a>
-            <button *ngIf="isOwnProfile" class="btn-unfollow-inline" (click)="unfollowFromList(user.followingId)">
-              Unfollow
+            <button *ngIf="isOwnProfile" class="follow-action-btn danger" (click)="unfollowFromList(user.followingId, user.followingUsername)">
+              Remove
             </button>
           </div>
-          <div class="empty-state" *ngIf="followingList.length === 0">Not following anyone yet.</div>
+          <div class="empty-state" *ngIf="filteredFollowingList.length === 0">No following users found.</div>
         </ng-container>
       </div>
 
@@ -365,6 +468,29 @@
           <div class="spinner"></div>
         </div>
       </ng-template>
+    </div>
+  </div>
+
+  <div class="product-modal-overlay animate-fade-in" *ngIf="showPostPreviewModal" (click)="closePostPreview()">
+    <div class="post-preview-modal" (click)="$event.stopPropagation()">
+      <button class="modal-close-btn" (click)="closePostPreview()">x</button>
+      <app-post-card *ngIf="selectedGridPost" [post]="selectedGridPost"></app-post-card>
+    </div>
+  </div>
+
+  <div class="product-modal-overlay animate-fade-in" *ngIf="showProfileShareModal" (click)="closeProfileShareModal()">
+    <div class="profile-share-modal glass-panel" (click)="$event.stopPropagation()">
+      <button class="modal-close-btn" (click)="closeProfileShareModal()">x</button>
+      <h3>Share Profile</h3>
+      <div class="profile-qr-wrap">
+        <img [src]="profileQrCodeUrl" alt="Profile QR code" class="profile-qr-img" />
+        <div class="profile-qr-username">&#64;{{ userProfile?.username }}</div>
+      </div>
+      <div class="profile-share-actions">
+        <button type="button" class="profile-share-action-btn" (click)="shareProfileNative()">Share profile</button>
+        <button type="button" class="profile-share-action-btn" (click)="copyProfileLink()">Copy link</button>
+        <button type="button" class="profile-share-action-btn" (click)="downloadProfileQr()">Download</button>
+      </div>
     </div>
   </div>
 </div>

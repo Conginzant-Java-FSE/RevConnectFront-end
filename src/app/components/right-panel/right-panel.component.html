@@ -37,7 +37,7 @@
                 </div>
             </div>
             <button class="text-btn" [ngClass]="{'pending': suggestion?.status === 'Pending', 'following': suggestion?.status === 'Following'}"
-                [disabled]="suggestion?.status !== 'Follow'" (click)="connect(suggestion?.id, i, $event)">
+                (click)="connect(suggestion?.id, i, $event)">
                 {{ suggestion.status }}
             </button>
         </div>

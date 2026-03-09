@@ -1,0 +1,64 @@
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(56px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 12px 0;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--glass-border);
+    background: var(--bg-panel);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    z-index: 1000;
+}
+
+.mobile-logo {
+    font-size: 1.15rem;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.topbar-icon-btn {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.topbar-icon {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.badge {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    background: var(--brand-pink);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 13px;
+    height: 13px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--bg-deep);
+}
+
+@media (max-width: 640px) {
+    .mobile-topbar {
+        display: flex;
+    }
+}

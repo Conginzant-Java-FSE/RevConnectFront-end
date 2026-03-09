@@ -44,6 +44,7 @@
 
     <ng-container *ngIf="{ isAuth: authService.isAuthenticated$ | async } as auth">
         <app-sidebar *ngIf="auth.isAuth && !hideLayout" (onOpenCreateModal)="openCreateModal()"></app-sidebar>
+        <app-mobile-topbar *ngIf="auth.isAuth && !hideLayout" (onOpenCreateModal)="openCreateModal()"></app-mobile-topbar>
 
         <main [ngClass]="(auth.isAuth && !hideLayout) ? 'main-content' : 'auth-main-content'">
             <router-outlet></router-outlet>
@@ -53,7 +54,12 @@
 
         <app-tabbar *ngIf="auth.isAuth && !hideLayout" (onOpenCreateModal)="openCreateModal()"></app-tabbar>
 
-        <app-create-modal *ngIf="auth.isAuth && !hideLayout" [isOpen]="isCreateModalOpen" mode="create"
-            (onClose)="isCreateModalOpen = false"></app-create-modal>
+        <app-create-modal
+            *ngIf="auth.isAuth && !hideLayout"
+            [isOpen]="isCreateModalOpen"
+            mode="create"
+            [defaultCreateSubMode]="createModalDefaultSubMode"
+            (onClose)="onCreateModalClosed()">
+        </app-create-modal>
     </ng-container>
 </div>

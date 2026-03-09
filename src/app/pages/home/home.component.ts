@@ -29,8 +29,8 @@ export class HomeComponent implements OnInit {
   storyModalMode: 'create' | 'view' = 'create';
   activeStoryView: any = null;
   storyCreateDefaultSubMode: 'POST' | 'STORY' = 'STORY';
-  private storyQueue: any[] = [];
-  private storyQueueIndex = -1;
+  storyQueue: any[] = [];
+  storyQueueIndex = -1;
   private seenStoryIds = new Set<number>();
 
   get user() {

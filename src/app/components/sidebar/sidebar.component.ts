@@ -2,9 +2,8 @@ import { Component, EventEmitter, OnDestroy, OnInit, Output, inject } from '@ang
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { NotificationService } from '../../services/notification.service';
-import { MessageService } from '../../services/message.service';
-import { firstValueFrom } from 'rxjs';
+import { ActivityBadgeService } from '../../services/activity-badge.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -15,21 +14,31 @@ import { firstValueFrom } from 'rxjs';
 })
 export class SidebarComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
-  notificationService = inject(NotificationService);
-  messageService = inject(MessageService);
+  activityBadgeService = inject(ActivityBadgeService);
 
   @Output() onOpenCreateModal = new EventEmitter<void>();
   notificationUnreadCount = 0;
   messageUnreadCount = 0;
   private refreshTimer: any = null;
+  private subscriptions: Subscription[] = [];
 
   get user() {
     return this.authService.currentUser;
   }
 
   ngOnInit(): void {
-    this.refreshUnreadCounts();
-    this.refreshTimer = setInterval(() => this.refreshUnreadCounts(), 15000);
+    this.subscriptions.push(
+      this.activityBadgeService.notificationUnreadCount$.subscribe(count => {
+        this.notificationUnreadCount = Number(count) || 0;
+      })
+    );
+    this.subscriptions.push(
+      this.activityBadgeService.messageUnreadCount$.subscribe(count => {
+        this.messageUnreadCount = Number(count) || 0;
+      })
+    );
+    this.activityBadgeService.refreshAll();
+    this.refreshTimer = setInterval(() => this.activityBadgeService.refreshAll(), 15000);
   }
 
   ngOnDestroy(): void {
@@ -37,23 +46,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       clearInterval(this.refreshTimer);
       this.refreshTimer = null;
     }
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions = [];
   }
 
   get unreadCount() {
     return this.notificationUnreadCount;
-  }
-
-  async refreshUnreadCounts() {
-    try {
-      const [notificationCount, messageCount] = await Promise.all([
-        firstValueFrom(this.notificationService.getUnreadCount()),
-        firstValueFrom(this.messageService.getUnreadCount())
-      ]);
-      this.notificationUnreadCount = Number(notificationCount) || 0;
-      this.messageUnreadCount = Number(messageCount) || 0;
-    } catch {
-      // keep existing badge values
-    }
   }
 
   get isCreator() {

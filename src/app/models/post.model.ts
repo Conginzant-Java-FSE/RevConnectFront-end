@@ -10,6 +10,7 @@ export interface Post {
   updatedAt: string;
   mediaUrl?: string;
   mediaType?: string;
+  productLink?: string;
   hashtags?: string;
   scheduledAt?: string;
   isPublished?: boolean;
@@ -31,6 +32,7 @@ export interface PostResponseDTO {
   authorProfilePicture?: string;
   mediaUrl?: string;
   mediaType?: string;
+  productLink?: string;
   scheduledAt?: string;
   isPublished?: boolean;
   hashtags?: string;
@@ -52,6 +54,7 @@ export interface CreatePostRequest {
   description?: string;
   mediaUrl?: string;
   mediaType?: string;
+  productLink?: string;
   hashtags?: string;
   scheduledAt?: string;
   collaboratorId?: number;

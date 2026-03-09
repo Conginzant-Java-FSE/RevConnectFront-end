@@ -18,8 +18,8 @@
         <article
             *ngFor="let post of posts; trackBy: trackByPost"
             class="explore-tile animate-fade-in"
-            (click)="goToProfile(post.authorUsername)"
-            [attr.aria-label]="'Open ' + post.authorUsername + ' profile'"
+            (click)="openPost(post)"
+            [attr.aria-label]="'Open post from ' + post.authorUsername"
         >
             <img
                 *ngIf="!isVideoPost(post)"
@@ -55,3 +55,10 @@
         </div>
     </ng-template>
 </section>
+
+<div class="explore-post-modal-overlay" *ngIf="showPostModal" (click)="closePostModal()">
+    <div class="explore-post-modal" (click)="$event.stopPropagation()">
+        <button type="button" class="explore-modal-close" (click)="closePostModal()">x</button>
+        <app-post-card *ngIf="selectedPost" [post]="selectedPost"></app-post-card>
+    </div>
+</div>

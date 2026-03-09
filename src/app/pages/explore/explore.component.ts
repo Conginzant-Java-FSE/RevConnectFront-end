@@ -1,14 +1,14 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Subscription } from 'rxjs';
+import { PostCardComponent } from '../../components/post-card/post-card.component';
 
 @Component({
     selector: 'app-explore',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, PostCardComponent],
     templateUrl: './explore.component.html',
     styleUrl: './explore.component.css'
 })
@@ -18,11 +18,12 @@ export class ExploreComponent implements OnInit, AfterViewInit, OnDestroy {
     posts: any[] = [];
     loading = true;
     error = '';
+    selectedPost: any = null;
+    showPostModal = false;
     private videoObserver?: IntersectionObserver;
     private videosChangeSub?: Subscription;
 
     api = inject(ApiService);
-    router = inject(Router);
 
     async ngOnInit() {
         await this.fetchExploreFeed();
@@ -36,6 +37,7 @@ export class ExploreComponent implements OnInit, AfterViewInit, OnDestroy {
     ngOnDestroy() {
         this.videosChangeSub?.unsubscribe();
         this.teardownVideoObserver();
+        document.body.style.overflow = '';
     }
 
     async fetchExploreFeed() {
@@ -85,11 +87,19 @@ export class ExploreComponent implements OnInit, AfterViewInit, OnDestroy {
         return ['.mp4', '.webm', '.ogg', '.mov', '.m4v'].some(ext => normalizedUrl.endsWith(ext));
     }
 
-    goToProfile(username: string) {
-        if (!username) {
+    openPost(post: any) {
+        if (!post) {
             return;
         }
-        this.router.navigate(['/profile', username]);
+        this.selectedPost = post;
+        this.showPostModal = true;
+        document.body.style.overflow = 'hidden';
+    }
+
+    closePostModal() {
+        this.showPostModal = false;
+        this.selectedPost = null;
+        document.body.style.overflow = '';
     }
 
     private setupVideoObserver() {

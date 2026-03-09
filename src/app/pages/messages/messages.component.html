@@ -7,8 +7,18 @@
         <button class="header-close-btn" routerLink="/home" aria-label="Close messages">Close</button>
     </div>
 
-    <div class="messages-content">
+    <div class="messages-content" [class.mobile-chat-open]="isMobileView && showConversationOnMobile">
         <div class="messages-list-sidebar">
+            <div class="inbox-tabs">
+                <button class="inbox-tab" [class.active]="activeInboxTab === 'PRIMARY'" (click)="activeInboxTab = 'PRIMARY'">
+                    Primary
+                </button>
+                <button class="inbox-tab" [class.active]="activeInboxTab === 'REQUESTS'" (click)="activeInboxTab = 'REQUESTS'">
+                    Requests
+                    <span class="tab-count" *ngIf="requestPartners.length > 0">{{ requestPartners.length }}</span>
+                </button>
+            </div>
+
             <div class="search-messages">
                 <input type="text" placeholder="Search users to message..." [(ngModel)]="searchQuery"
                     (ngModelChange)="handleSearch()" />
@@ -33,7 +43,7 @@
                 </ng-container>
 
                 <ng-template #partnersList>
-                    <div *ngFor="let partner of partners" class="message-thread"
+                    <div *ngFor="let partner of visiblePartners" class="message-thread"
                         [class.unread]="(partner.unreadCount || 0) > 0"
                         [class.active]="activeContact?.id === partner.id" (click)="handleSelectContact(partner)">
                         <div class="thread-avatar">
@@ -52,7 +62,7 @@
                     </div>
                 </ng-template>
 
-                <div *ngIf="!searchQuery && partners.length === 0" class="empty-state-text">
+                <div *ngIf="!searchQuery && visiblePartners.length === 0" class="empty-state-text">
                     <span class="empty-chip">No chats yet</span>
                     <p>Search for a user to start a conversation.</p>
                 </div>
@@ -70,6 +80,10 @@
             <ng-container *ngIf="activeContact">
                 <div class="active-message-header">
                     <div class="chat-header-info">
+                        <button *ngIf="isMobileView" type="button" class="mobile-back-btn" (click)="goBackToContacts()"
+                            aria-label="Back to conversations">
+                            Back
+                        </button>
                         <div class="thread-avatar small">
                             <img *ngIf="activeContact.profilePicUrl" [src]="activeContact.profilePicUrl"
                                 [alt]="activeContact.username" />
@@ -80,6 +94,15 @@
                 </div>
 
                 <div class="chat-history">
+                    <div *ngIf="isActiveContactRequest()" class="request-approval-card">
+                        <strong>Message Request</strong>
+                        <p>You are not following {{ activeContact.username }}. Approve to continue this chat.</p>
+                        <div class="request-actions">
+                            <button class="request-btn approve" (click)="approveRequest(activeContact)">Approve</button>
+                            <button class="request-btn decline" (click)="declineRequest(activeContact)">Decline</button>
+                        </div>
+                    </div>
+
                     <div *ngIf="loading && conversation.length === 0" class="chat-loading">Loading messages...</div>
 
                     <ng-container *ngIf="conversation.length > 0">
@@ -132,9 +155,9 @@
                     <div #messagesEnd></div>
                 </div>
 
-                <form class="chat-input-area" (ngSubmit)="handleSendMessage($event)">
-                    <input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" name="newMessage" />
-                    <button type="submit" [disabled]="!newMessage.trim()" class="send-btn">
+                <form class="chat-input-area" (ngSubmit)="handleSendMessage($event)" [class.disabled]="isActiveContactRequest()">
+                    <input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" name="newMessage" [disabled]="isActiveContactRequest()" />
+                    <button type="submit" [disabled]="!newMessage.trim() || isActiveContactRequest()" class="send-btn">
                         Send
                     </button>
                 </form>
