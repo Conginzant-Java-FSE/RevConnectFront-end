@@ -175,7 +175,10 @@ ul { list-style: none; }
 @media (max-width: 640px) {
     .sidebar { display: none; }
     .main-content {
+        padding-top: calc(72px + env(safe-area-inset-top));
         padding-bottom: calc(108px + env(safe-area-inset-bottom));
+        padding-left: 10px;
+        padding-right: 10px;
     }
     .feed-column {
         padding-bottom: 12px;

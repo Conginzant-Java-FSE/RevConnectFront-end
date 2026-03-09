@@ -134,6 +134,33 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.inbox-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.inbox-tab {
+    height: 44px;
+    font-size: 14px;
+    color: rgba(230, 230, 240, 0.62);
+    border-bottom: 2px solid transparent;
+}
+
+.inbox-tab.active {
+    color: #fff;
+    border-bottom-color: rgba(59, 130, 246, 0.9);
+}
+
+.tab-count {
+    margin-left: 5px;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(184, 48, 80, 0.22);
+    color: #fcb3c3;
+}
+
 .search-messages input {
     width: 100%;
     padding: 12px 16px;
@@ -367,6 +394,48 @@
     margin-bottom: auto;
 }
 
+.request-approval-card {
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.12);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.request-approval-card strong {
+    font-size: 14px;
+}
+
+.request-approval-card p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: rgba(230, 230, 240, 0.8);
+}
+
+.request-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+}
+
+.request-btn {
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.request-btn.approve {
+    background: rgba(16, 185, 129, 0.22);
+    border: 1px solid rgba(16, 185, 129, 0.5);
+    color: #a7f3d0;
+}
+
+.request-btn.decline {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #fecaca;
+}
+
 .chat-bubble-wrapper {
     display: flex;
     flex-direction: column;
@@ -497,6 +566,10 @@
     align-items: center;
 }
 
+.chat-input-area.disabled {
+    opacity: 0.65;
+}
+
 .chat-input-area input {
     flex-grow: 1;
     padding: 13px 18px;
@@ -617,8 +690,9 @@
 
 @media (max-width: 860px) {
     .messages-container {
-        min-height: 560px;
-        height: calc(100vh - 96px);
+        min-height: 0;
+        height: calc(100dvh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        border-radius: 12px;
     }
 
     .messages-list-sidebar {
@@ -626,7 +700,43 @@
         border-right: none;
     }
 
-    .active-message-view {
+    .messages-content.mobile-chat-open .messages-list-sidebar {
         display: none;
+    }
+
+    .messages-content:not(.mobile-chat-open) .active-message-view {
+        display: none;
+    }
+
+    .messages-content.mobile-chat-open .active-message-view {
+        display: flex;
+    }
+
+    .messages-header {
+        padding: 16px;
+    }
+
+    .messages-header h2 {
+        font-size: 24px;
+    }
+
+    .active-message-header,
+    .chat-history,
+    .chat-input-area {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .chat-bubble-wrapper {
+        max-width: 90%;
+    }
+
+}
+
+@media (max-width: 520px) {
+    .messages-container {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
 }

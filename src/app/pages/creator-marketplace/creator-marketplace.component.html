@@ -65,8 +65,14 @@
           <p class="proposal-subtitle" *ngIf="application.promotionBusinessPostId">Business Post ID: {{ application.promotionBusinessPostId }}</p>
           <p class="proposal-subtitle" *ngIf="application.promotionProductImageUrl">
             Product Image:
-            <a [href]="application.promotionProductImageUrl" target="_blank" rel="noopener noreferrer">{{ application.promotionProductImageUrl }}</a>
+            <a [href]="application.promotionProductImageUrl" target="_blank" rel="noopener noreferrer">View product image</a>
           </p>
+          <img
+            *ngIf="application.promotionProductImageUrl && isDataImageUrl(application.promotionProductImageUrl)"
+            [src]="application.promotionProductImageUrl"
+            alt="Promotion product"
+            class="promo-image-preview"
+          />
           <p class="proposal-subtitle" *ngIf="application.creatorConfirmationNote">My Confirmation: {{ application.creatorConfirmationNote }}</p>
         </div>
         <div class="biz-actions">
@@ -123,8 +129,14 @@
           <p class="proposal-subtitle" *ngIf="proposal.promotionBusinessPostId">Business Post ID: {{ proposal.promotionBusinessPostId }}</p>
           <p class="proposal-subtitle" *ngIf="proposal.promotionProductImageUrl">
             Product Image:
-            <a [href]="proposal.promotionProductImageUrl" target="_blank" rel="noopener noreferrer">{{ proposal.promotionProductImageUrl }}</a>
+            <a [href]="proposal.promotionProductImageUrl" target="_blank" rel="noopener noreferrer">View product image</a>
           </p>
+          <img
+            *ngIf="proposal.promotionProductImageUrl && isDataImageUrl(proposal.promotionProductImageUrl)"
+            [src]="proposal.promotionProductImageUrl"
+            alt="Promotion product"
+            class="promo-image-preview"
+          />
           <p class="proposal-subtitle" *ngIf="proposal.creatorConfirmationNote">My Confirmation: {{ proposal.creatorConfirmationNote }}</p>
         </div>
         <div class="biz-actions">
@@ -415,6 +427,108 @@
       <button class="mini-btn" (click)="closeApplyModal()">Cancel</button>
       <button class="mini-btn accept" (click)="submitApplication()" [disabled]="applying || !pitchMessage.trim()">
         {{ applying ? 'Submitting...' : 'Submit Application' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="apply-modal-wrap" *ngIf="showPromotionDetailsModal" (click)="closePromotionDetailsModal()">
+  <div class="apply-modal glass-panel promotion-modal" (click)="$event.stopPropagation()">
+    <h3>Promotion Details</h3>
+    <p>Send all product and campaign details to the creator in one request.</p>
+
+    <div class="promotion-form-grid">
+      <label>Product Details</label>
+      <textarea [(ngModel)]="promotionDetailsForm.promotionDetails" placeholder="Write promotion details, usage instructions, deadlines..." rows="5"></textarea>
+
+      <label>Product Photo URL (Optional)</label>
+      <input [(ngModel)]="promotionDetailsForm.promotionProductImageUrl" placeholder="https://example.com/product.jpg or upload below" />
+
+      <label>Or Upload Product Photo (Optional)</label>
+      <input type="file" accept="image/*" (change)="onPromotionImageFileChange($event)" />
+
+      <label>Buying Link (Optional)</label>
+      <input [(ngModel)]="promotionDetailsForm.promotionProductLink" placeholder="https://yourstore.com/product/..." />
+
+      <label>Business Post ID (Optional)</label>
+      <input [(ngModel)]="promotionDetailsForm.promotionBusinessPostId" placeholder="123" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="mini-btn" (click)="closePromotionDetailsModal()">Cancel</button>
+      <button class="mini-btn accept" (click)="submitPromotionDetails()"
+        [disabled]="promotionDetailsSubmitting || !promotionDetailsForm.promotionDetails.trim()">
+        {{ promotionDetailsSubmitting ? 'Sending...' : 'Send' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="apply-modal-wrap" *ngIf="showPaymentModal" (click)="closePaymentModal()">
+  <div class="apply-modal glass-panel promotion-modal" (click)="$event.stopPropagation()">
+    <h3>Complete + Pay</h3>
+    <p>Enter payment details to complete this promotion.</p>
+
+    <div class="promotion-form-grid">
+      <label>Payment Amount</label>
+      <input type="number" [(ngModel)]="paymentForm.amount" placeholder="Enter amount" />
+      <label>Payment Reference (Optional)</label>
+      <input [(ngModel)]="paymentForm.reference" placeholder="Transaction ID / reference" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="mini-btn" (click)="closePaymentModal()">Cancel</button>
+      <button class="mini-btn accept" (click)="submitPaymentModal()"
+        [disabled]="paymentSubmitting || !paymentForm.amount">
+        {{ paymentSubmitting ? 'Saving...' : 'Complete + Pay' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="apply-modal-wrap" *ngIf="showConfirmationModal" (click)="closeConfirmationModal()">
+  <div class="apply-modal glass-panel promotion-modal" (click)="$event.stopPropagation()">
+    <h3>Send Confirmation</h3>
+    <p>Send completion note to business account.</p>
+
+    <div class="promotion-form-grid">
+      <label>Confirmation Note</label>
+      <textarea [(ngModel)]="confirmationNote" rows="4" placeholder="Promotion completed, posted as per brief..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="mini-btn" (click)="closeConfirmationModal()">Cancel</button>
+      <button class="mini-btn accept" (click)="submitConfirmationModal()"
+        [disabled]="confirmationSubmitting || !confirmationNote.trim()">
+        {{ confirmationSubmitting ? 'Sending...' : 'Send' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="apply-modal-wrap" *ngIf="showPromotionPostModal" (click)="closePromotionPostModal()">
+  <div class="apply-modal glass-panel promotion-modal" (click)="$event.stopPropagation()">
+    <h3>Edit Promotion Post</h3>
+    <p>Review and edit before posting to your profile.</p>
+
+    <div class="promotion-form-grid">
+      <label>Description</label>
+      <textarea [(ngModel)]="promotionPostForm.description" rows="4" placeholder="Write post caption..."></textarea>
+
+      <label>Hashtags (Optional)</label>
+      <input [(ngModel)]="promotionPostForm.hashtags" placeholder="#promo #brand" />
+
+      <label>Media URL (Optional)</label>
+      <input [(ngModel)]="promotionPostForm.mediaUrl" placeholder="Leave as-is to use business image" />
+
+      <label>Shop Link (Optional)</label>
+      <input [(ngModel)]="promotionPostForm.productLink" placeholder="https://yourstore.com/product" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="mini-btn" (click)="closePromotionPostModal()">Cancel</button>
+      <button class="mini-btn accept" (click)="submitPromotionPostModal()" [disabled]="promotionPostSubmitting">
+        {{ promotionPostSubmitting ? 'Posting...' : 'Create Promotion Post' }}
       </button>
     </div>
   </div>

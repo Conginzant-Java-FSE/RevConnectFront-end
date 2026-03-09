@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { firstValueFrom } from 'rxjs';
+import { ActivityBadgeService } from '../../services/activity-badge.service';
 
 @Component({
   selector: 'app-notifications',
@@ -17,6 +18,7 @@ export class NotificationsComponent implements OnInit {
 
   api = inject(ApiService);
   router = inject(Router);
+  activityBadgeService = inject(ActivityBadgeService);
 
   ngOnInit() {
     this.fetchNotifications();
@@ -27,6 +29,7 @@ export class NotificationsComponent implements OnInit {
     try {
       const res = await firstValueFrom(this.api.get<any[]>('/notifications'));
       this.notifications = res || [];
+      this.activityBadgeService.refreshNotifications();
     } catch (err) {
       console.error("Failed to load notifications", err);
     } finally {
@@ -39,6 +42,7 @@ export class NotificationsComponent implements OnInit {
     try {
       await firstValueFrom(this.api.put(`/notifications/${id}/read`, {}, { responseType: 'text' as 'json' }));
       this.notifications = this.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+      this.activityBadgeService.refreshNotifications();
     } catch (err) {
       console.error(err);
     }
@@ -48,6 +52,7 @@ export class NotificationsComponent implements OnInit {
     try {
       await firstValueFrom(this.api.put('/notifications/read-all', {}, { responseType: 'text' as 'json' }));
       this.notifications = this.notifications.map(n => ({ ...n, read: true }));
+      this.activityBadgeService.refreshNotifications();
     } catch (err) {
       console.error(err);
     }
@@ -60,6 +65,7 @@ export class NotificationsComponent implements OnInit {
       this.notifications = this.notifications.map(n =>
         n.id === notifId ? { ...n, type: 'FOLLOW_ACCEPTED', read: true } : n
       );
+      this.activityBadgeService.refreshNotifications();
     } catch (err) {
       console.error("Failed to accept request", err);
     }
@@ -70,6 +76,7 @@ export class NotificationsComponent implements OnInit {
     try {
       await firstValueFrom(this.api.put(`/follow/reject/${requestId}`, {}, { responseType: 'text' as 'json' }));
       this.notifications = this.notifications.filter(n => n.id !== notifId);
+      this.activityBadgeService.refreshNotifications();
     } catch (err) {
       console.error("Failed to reject request", err);
     }
@@ -89,6 +96,12 @@ export class NotificationsComponent implements OnInit {
       case 'COLLAB_PROMOTION_CONFIRMED': return 'confirmed promotion completion.';
       case 'COLLAB_PROMOTION_POST_CREATED': return 'created a promotion post and tagged you.';
       case 'COLLAB_PAYMENT_DONE': return 'marked collaboration payment as completed.';
+      case 'COLLAB_DIRECT_PROPOSAL_SENT': return 'sent you a direct collaboration request.';
+      case 'COLLAB_APPLICATION_ACCEPTED': return 'accepted your collaboration application.';
+      case 'COLLAB_APPLICATION_REJECTED': return 'rejected your collaboration application.';
+      case 'COLLAB_OPEN_OPPORTUNITY': return 'posted a new open promotion opportunity.';
+      case 'COLLAB_DIRECT_PROPOSAL_ACCEPTED': return 'accepted your direct collaboration request.';
+      case 'COLLAB_DIRECT_PROPOSAL_REJECTED': return 'rejected your direct collaboration request.';
       case 'FOLLOW': return 'started following you.';
       default: return 'interacted with you.';
     }

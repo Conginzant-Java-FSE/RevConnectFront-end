@@ -1,5 +1,5 @@
 <div class="story-modal-overlay" *ngIf="isOpen" (click)="closeModal()">
-    <div class="story-modal-content" (click)="$event.stopPropagation()">
+    <div class="story-modal-content" [class.compose-wide]="mode === 'create' && createSubMode === 'POST' && hasSelectedMedia" (click)="$event.stopPropagation()">
 
         <!-- View Mode -->
         <div class="story-viewer" *ngIf="mode === 'view' && activeStory">
@@ -30,8 +30,11 @@
                 <button class="story-nav-zone right" (click)="handleViewNext()" aria-label="Next story"></button>
             </div>
 
-            <div class="story-progress-bar">
-                <div class="story-progress-fill"></div>
+            <div class="story-progress-wrap">
+                <div class="story-progress-segment" *ngFor="let segment of storySegments">
+                    <div class="story-progress-fill" [class.filled]="getStorySegmentClass(segment) === 'filled'"
+                        [class.active]="getStorySegmentClass(segment) === 'active'"></div>
+                </div>
             </div>
         </div>
 
@@ -42,7 +45,6 @@
                 <button class="story-close-btn text-dark" (click)="closeModal()">&times;</button>
             </div>
 
-            <!-- Toggle Switch -->
             <div class="create-toggle-container">
                 <button class="toggle-btn" [class.active]="createSubMode === 'POST'" (click)="setCreateSubMode('POST')">
                     Post
@@ -52,89 +54,105 @@
                 </button>
             </div>
 
-            <form (ngSubmit)="handleSubmit($event)" class="story-creator-form">
+            <form (ngSubmit)="handleSubmit($event)" class="story-creator-form insta-compose-form">
                 <div class="story-error" *ngIf="error">{{error}}</div>
 
-                <div class="form-group">
-                    <label>{{ createSubMode === 'POST' ? 'Upload Photo or Video' : 'Upload Image' }}</label>
-                    <input type="file" [attr.accept]="acceptedMediaTypes" (change)="handleFileChange($event)" style="padding: 8px;"
-                        required />
-                </div>
+                <ng-container *ngIf="createSubMode === 'POST'">
+                    <div class="insta-compose-layout" *ngIf="hasSelectedMedia; else selectMediaState">
+                        <div class="insta-preview-area">
+                            <img *ngIf="activeMedia?.type !== 'VIDEO'" [src]="activeMedia?.url" alt="Preview" class="insta-main-preview" />
+                            <video *ngIf="activeMedia?.type === 'VIDEO'" [src]="activeMedia?.url" class="insta-main-preview" controls playsinline></video>
 
-                <div class="form-group" *ngIf="createSubMode === 'POST'">
-                    <label>Description</label>
-                    <textarea [(ngModel)]="description" name="description" placeholder="Write a caption..."
-                        class="form-textarea"></textarea>
-                </div>
+                            <div class="insta-thumbs">
+                                <button type="button" class="insta-thumb add" (click)="picker.click()">+</button>
+                                <button type="button" class="insta-thumb" *ngFor="let item of selectedMedia; let i = index"
+                                    [class.active]="activeMediaIndex === i" (click)="selectMediaIndex(i)">
+                                    <img *ngIf="item.type !== 'VIDEO'" [src]="item.url" alt="Item" />
+                                    <video *ngIf="item.type === 'VIDEO'" [src]="item.url" muted playsinline></video>
+                                </button>
+                                <input #picker type="file" accept="image/*,video/*" multiple hidden (change)="handleFileChange($event)" />
+                            </div>
+                        </div>
 
-                <div class="form-group" *ngIf="createSubMode === 'POST'">
-                    <label>Hashtags</label>
-                    <input type="text" [(ngModel)]="hashtags" name="hashtags" placeholder="#tech #style..." />
-                </div>
-
-                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser">
-                    <label class="check-row">
-                        <input type="checkbox" [(ngModel)]="scheduleEnabled" name="scheduleEnabled" />
-                        <span>Schedule this post</span>
-                    </label>
-                </div>
-
-                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser && scheduleEnabled">
-                    <label>Publish At</label>
-                    <div class="schedule-row">
-                        <input type="date" [(ngModel)]="scheduleDate" name="scheduleDate" />
-                        <select [(ngModel)]="scheduleHour" name="scheduleHour">
-                            <option *ngFor="let hour of hourOptions" [value]="hour">{{ hour }}</option>
-                        </select>
-                        <select [(ngModel)]="scheduleMinute" name="scheduleMinute">
-                            <option *ngFor="let minute of minuteOptions" [value]="minute">{{ minute }}</option>
-                        </select>
-                        <select [(ngModel)]="scheduleMeridiem" name="scheduleMeridiem">
-                            <option value="AM">AM</option>
-                            <option value="PM">PM</option>
-                        </select>
+                        <div class="insta-side-panel">
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea [(ngModel)]="description" name="description" placeholder="Write a caption..." class="form-textarea"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Hashtags</label>
+                                <input type="text" [(ngModel)]="hashtags" name="hashtags" placeholder="#travel #sunset..." />
+                            </div>
+                            <div class="form-group">
+                                <label>Tag People</label>
+                                <div class="tag-input-wrap">
+                                    <input type="text" [(ngModel)]="tagPeople" name="tagPeople"
+                                    (ngModelChange)="onTagPeopleInput()"
+                                    (keydown)="onTagPeopleKeydown($event)"
+                                    (blur)="onTagPeopleBlur()"
+                                    placeholder="username1, username2" />
+                                    <div class="tag-suggestions" *ngIf="showTagSuggestions">
+                                        <button type="button" class="tag-suggestion-item"
+                                            *ngFor="let suggestion of tagSuggestions; let i = index"
+                                            [class.active]="i === activeTagSuggestionIndex"
+                                            (mousedown)="applyTagSuggestion(suggestion)">
+                                            &#64;{{ suggestion }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Shop Link</label>
+                                <input type="text" [(ngModel)]="productLink" name="productLink"
+                                    placeholder="https://yourstore.com/product" />
+                            </div>
+                            <button type="submit" class="story-submit-btn" [disabled]="loading || !hasSelectedMedia">
+                                {{ loading ? 'Posting...' : 'Share Post' }}
+                            </button>
+                            <button type="button" class="clear-media-btn" (click)="clearSelectedMedia()">Choose different media</button>
+                        </div>
                     </div>
-                </div>
+                </ng-container>
 
-                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser">
-                    <label class="check-row">
-                        <input type="checkbox" [(ngModel)]="addCollaborator" name="addCollaborator" />
-                        <span>Add co-author collaborator</span>
-                    </label>
-                </div>
+                <ng-template #selectMediaState>
+                    <div class="media-select-state">
+                        <div class="media-select-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="2.5" y="4.5" width="11.5" height="11.5" rx="2"></rect>
+                                <path d="M4.5 13l3-3 2.5 2.5 2-2 2 2.5"></path>
+                                <path d="M15 8.5l.5-.5A2.8 2.8 0 0 1 19.4 12L19 12.4"></path>
+                                <rect x="11.2" y="9.8" width="10.3" height="10.3" rx="2"></rect>
+                                <path d="M14.4 13.2l4.2 2.8-4.2 2.8v-5.6z"></path>
+                            </svg>
+                        </div>
+                        <h4>Drag photos and videos here</h4>
+                        <input type="file" [attr.accept]="acceptedMediaTypes" [attr.multiple]="createSubMode === 'POST' ? '' : null"
+                            (change)="handleFileChange($event)" />
+                    </div>
+                </ng-template>
 
-                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser && addCollaborator">
-                    <label>Collaborator Username</label>
-                    <input type="text" [(ngModel)]="collaboratorUsername" name="collaboratorUsername"
-                        placeholder="creator_username" />
-                </div>
+                <ng-container *ngIf="createSubMode === 'STORY'">
+                    <div class="form-group">
+                        <label>Upload Image</label>
+                        <input type="file" accept="image/*" (change)="handleFileChange($event)" />
+                    </div>
 
-                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser">
-                    <label>Series / Playlist Name (optional)</label>
-                    <input type="text" [(ngModel)]="seriesName" name="seriesName" placeholder="Travel Vlogs" />
-                </div>
+                    <div class="form-group" *ngIf="isCreatorUser">
+                        <label class="check-row">
+                            <input type="checkbox" [(ngModel)]="subscriberOnlyStory" name="subscriberOnlyStory" />
+                            <span>Subscribers-only story (exclusive)</span>
+                        </label>
+                    </div>
 
-                <div class="form-group" *ngIf="createSubMode === 'POST' && isCreatorUser && seriesName.trim()">
-                    <label>Series Order</label>
-                    <input type="number" min="0" [(ngModel)]="seriesOrder" name="seriesOrder" />
-                </div>
+                    <div class="story-preview-box">
+                        <img *ngIf="mediaUrl" [src]="mediaUrl" alt="Preview" />
+                        <span *ngIf="!mediaUrl">Image Preview</span>
+                    </div>
 
-                <div class="form-group" *ngIf="createSubMode === 'STORY' && isCreatorUser">
-                    <label class="check-row">
-                        <input type="checkbox" [(ngModel)]="subscriberOnlyStory" name="subscriberOnlyStory" />
-                        <span>Subscribers-only story (exclusive)</span>
-                    </label>
-                </div>
-
-                <div class="story-preview-box" [class.post-preview]="createSubMode === 'POST'">
-                    <img *ngIf="mediaUrl && mediaType !== 'VIDEO'" [src]="mediaUrl" alt="Preview" />
-                    <video *ngIf="mediaUrl && mediaType === 'VIDEO'" [src]="mediaUrl" class="preview-video" muted autoplay loop playsinline controls></video>
-                    <span *ngIf="!mediaUrl">{{ createSubMode === 'POST' ? 'Photo / Video Preview' : 'Image Preview' }}</span>
-                </div>
-
-                <button type="submit" class="story-submit-btn" [disabled]="loading || !mediaUrl">
-                    {{ loading ? 'Posting...' : 'Share ' + (createSubMode === 'POST' ? 'Post' : 'Story') }}
-                </button>
+                    <button type="submit" class="story-submit-btn" [disabled]="loading || !mediaUrl">
+                        {{ loading ? 'Posting...' : 'Share Story' }}
+                    </button>
+                </ng-container>
             </form>
         </div>
 

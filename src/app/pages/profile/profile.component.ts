@@ -8,8 +8,9 @@ import { AuthService } from '../../services/auth.service';
 import { PostCardComponent } from '../../components/post-card/post-card.component';
 import { firstValueFrom } from 'rxjs';
 import { Product, ProductPayload } from '../../models/product.model';
+import { CreateModalService } from '../../services/create-modal.service';
 
-type ProfileTab = 'POSTS' | 'PRODUCTS';
+type ProfileTab = 'POSTS' | 'PRODUCTS' | 'SAVED' | 'TAGGED';
 
 interface ProductFormState {
   productName: string;
@@ -32,11 +33,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
   route = inject(ActivatedRoute);
   authService = inject(AuthService);
   api = inject(ApiService);
+  createModalService = inject(CreateModalService);
 
   usernameParam: string | null = null;
   userProfile: any = null;
   posts: any[] = [];
   products: Product[] = [];
+  savedPostsProfile: any[] = [];
+  taggedPosts: any[] = [];
   activeTab: ProfileTab = 'POSTS';
   loading = true;
   error = '';
@@ -47,11 +51,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   followersCount = 0;
   followingCount = 0;
-  followersList: Array<{ followerId: number; followerUsername: string }> = [];
-  followingList: Array<{ followingId: number; followingUsername: string }> = [];
+  followersList: Array<{
+    followerId: number;
+    followerUsername: string;
+    displayName: string;
+    avatarUrl: string;
+    relationStatus: 'Follow' | 'Following' | 'Pending';
+    confirmUnfollow: boolean;
+  }> = [];
+  followingList: Array<{ followingId: number; followingUsername: string; displayName: string; avatarUrl: string }> = [];
   showFollowListModal = false;
   activeFollowListType: 'followers' | 'following' = 'followers';
   loadingFollowList = false;
+  followListSearchQuery = '';
 
   isEditingPic = false;
   newPicUrl = '';
@@ -61,6 +73,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   isAddProductModalOpen = false;
   isSubmittingProduct = false;
+  loadingSavedPostsProfile = false;
+  selectedGridPost: any = null;
+  showPostPreviewModal = false;
+  showProfileShareModal = false;
   private scheduleBadgeTimer: any = null;
   editingProductId: number | null = null;
   productForm: ProductFormState = {
@@ -171,6 +187,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
       'Welcome to RevConnect! Personalize your profile in settings.';
   }
 
+  get profileShareLink(): string {
+    const username = this.userProfile?.username || this.authService.currentUser?.username || '';
+    if (!username) {
+      return '';
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/profile/${encodeURIComponent(username)}`;
+  }
+
+  get profileQrCodeUrl(): string {
+    const link = this.profileShareLink;
+    if (!link) {
+      return '';
+    }
+    return `https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=12&data=${encodeURIComponent(link)}`;
+  }
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       this.usernameParam = params.get('username');
@@ -189,6 +222,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       clearInterval(this.scheduleBadgeTimer);
       this.scheduleBadgeTimer = null;
     }
+    document.body.style.overflow = '';
   }
 
   async fetchProfileData() {
@@ -236,6 +270,34 @@ export class ProfileComponent implements OnInit, OnDestroy {
         likeCount: dto.likeCount || 0,
         commentCount: dto.commentCount || 0
       }));
+
+      const taggedUsername = (
+        this.userProfile?.username
+        || this.usernameParam
+        || this.authService.currentUser?.username
+        || ''
+      ).toString().trim();
+      if (taggedUsername) {
+        const taggedRes = await firstValueFrom(
+          this.api.get<any[]>(`/revconnect/users/posts/tagged/${encodeURIComponent(taggedUsername)}`)
+        ).catch(() => []);
+
+        this.taggedPosts = (taggedRes || []).map(dto => ({
+          ...dto,
+          authorUsername: dto.userName,
+          content: dto.description,
+          createdAt: dto.createdAt || new Date(),
+          mediaType: dto.mediaType || '',
+          isPinned: !!dto.isPinned,
+          isPublished: dto.isPublished !== false,
+          scheduledAt: dto.scheduledAt || null,
+          likeCount: dto.likeCount || 0,
+          commentCount: dto.commentCount || 0
+        }));
+      } else {
+        this.taggedPosts = [];
+      }
+
       this.updateScheduledPostStates();
       this.startScheduleWatcher();
       this.sortPostsForProfile();
@@ -247,6 +309,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
         await this.fetchBusinessData();
       } else {
         this.products = [];
+      }
+
+      if (this.isOwnProfile) {
+        await this.fetchSavedPostsForProfile();
+      } else {
+        this.savedPostsProfile = [];
       }
 
       if (!this.isOwnProfile) {
@@ -310,8 +378,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       const pendingRes = await firstValueFrom(this.api.get<any[]>('/follow/requests/sent'));
       const isPending = (pendingRes || []).some(
-        (req: any) => req.senderId === this.authService.currentUser?.id
-          && req.receiverId === targetUserId
+        (req: any) =>
+          ((Number(req?.senderId) === Number(this.authService.currentUser?.id))
+            || (Number(req?.sender?.id) === Number(this.authService.currentUser?.id)))
+          && ((Number(req?.receiverId) === targetUserId) || (Number(req?.receiver?.id) === targetUserId))
       );
       if (isPending) {
         this.followStatus = 'Pending';
@@ -418,11 +488,34 @@ export class ProfileComponent implements OnInit, OnDestroy {
           throw new Error('Target user id is missing');
         }
 
-        const response = await firstValueFrom(this.api.post<any>(`/follow/request/${targetUserId}`, {}));
-        this.followStatus = this.mapFollowStatusFromResponse(response);
+        try {
+          const response = await firstValueFrom(this.api.post<any>(`/follow/request/${targetUserId}`, {}));
+          this.followStatus = this.mapFollowStatusFromResponse(response);
+        } catch (requestErr: any) {
+          const requestMessage = this.extractErrorMessage(requestErr);
+          if (requestMessage.includes('already following') || requestMessage.includes('already followed')) {
+            this.followStatus = 'Following';
+          } else if (requestMessage.includes('pending') || requestMessage.includes('already requested')) {
+            this.followStatus = 'Pending';
+          } else {
+            await firstValueFrom(this.api.post<any>(`/revconnect/users/following/${targetUserId}`, {}));
+            this.followStatus = 'Following';
+          }
+        }
       }
       await this.refreshFollowDataAfterMutation();
-    } catch (err) {
+    } catch (err: any) {
+      const message = this.extractErrorMessage(err);
+      if (message.includes('already following') || message.includes('already followed')) {
+        this.followStatus = 'Following';
+        await this.refreshFollowDataAfterMutation();
+        return;
+      }
+      if (message.includes('pending') || message.includes('already requested')) {
+        this.followStatus = 'Pending';
+        await this.refreshFollowDataAfterMutation();
+        return;
+      }
       console.error('Failed to update follow status', err);
       alert('Could not update follow status.');
     } finally {
@@ -440,15 +533,42 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const listRes = await firstValueFrom(this.api.get<any[]>(endpoint));
 
       if (type === 'followers') {
-        this.followersList = (listRes || []).map(item => ({
+        const rawFollowers: Array<{
+          followerId: number;
+          followerUsername: string;
+          displayName: string;
+          avatarUrl: string;
+          relationStatus: 'Follow' | 'Following' | 'Pending';
+          confirmUnfollow: boolean;
+        }> = (listRes || []).map(item => ({
           followerId: Number(item?.followerId) || 0,
-          followerUsername: (item?.followerUsername || '').toString()
+          followerUsername: (item?.followerUsername || '').toString(),
+          displayName: (item?.followerFullName || item?.followerUsername || '').toString(),
+          avatarUrl: (item?.followerProfilePic || item?.followerAvatarUrl || '').toString(),
+          relationStatus: 'Follow',
+          confirmUnfollow: false
         }));
+        const deduped = this.dedupeByUsername(rawFollowers, user => user.followerUsername);
+        if (this.isOwnProfile) {
+          const followingRes = await firstValueFrom(this.api.get<any[]>('/revconnect/users/following')).catch(() => []);
+          const followingUsernames = new Set(
+            (followingRes || []).map((f: any) => (f?.followingUsername || '').toString().toLowerCase())
+          );
+          for (const follower of deduped) {
+            if (followingUsernames.has(follower.followerUsername.toLowerCase())) {
+              follower.relationStatus = 'Following';
+            }
+          }
+        }
+        this.followersList = deduped;
       } else {
-        this.followingList = (listRes || []).map(item => ({
+        const rawFollowing = (listRes || []).map(item => ({
           followingId: Number(item?.followingId) || 0,
-          followingUsername: (item?.followingUsername || '').toString()
+          followingUsername: (item?.followingUsername || '').toString(),
+          displayName: (item?.followingFullName || item?.followingUsername || '').toString(),
+          avatarUrl: (item?.followingProfilePic || item?.followingAvatarUrl || '').toString()
         }));
+        this.followingList = this.dedupeByUsername(rawFollowing, user => user.followingUsername);
       }
     } catch (err) {
       console.error(`Failed to load ${type} list`, err);
@@ -464,16 +584,50 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   closeFollowListModal() {
     this.showFollowListModal = false;
+    this.followListSearchQuery = '';
   }
 
-  async unfollowFromList(followingId: number) {
+  async fetchSavedPostsForProfile() {
+    this.loadingSavedPostsProfile = true;
+    try {
+      const saved = await firstValueFrom(this.api.get<any[]>('/saved')).catch(() => []);
+      this.savedPostsProfile = (saved || []).map(item => ({
+        ...(item?.post || {}),
+        id: item?.post?.id,
+        postId: item?.post?.id,
+        authorUsername: item?.post?.userName || item?.post?.authorUsername || '',
+        content: item?.post?.description || item?.post?.content || '',
+        description: item?.post?.description || item?.post?.content || '',
+        mediaUrl: item?.post?.mediaUrl || '',
+        mediaType: item?.post?.mediaType || ''
+      }));
+    } catch {
+      this.savedPostsProfile = [];
+    } finally {
+      this.loadingSavedPostsProfile = false;
+    }
+  }
+
+  async unfollowFromList(followingId: number, followingUsername: string) {
     if (!this.isOwnProfile || !followingId) return;
 
     try {
-      await firstValueFrom(
-        this.api.delete(`/revconnect/users/following/${followingId}`, { responseType: 'text' as 'json' })
+      try {
+        await firstValueFrom(
+          this.api.delete(`/revconnect/users/following/${followingId}`, { responseType: 'text' as 'json' })
+        );
+      } catch {
+        await firstValueFrom(
+          this.api.delete(`/revconnect/users/following/username/${encodeURIComponent(followingUsername)}`, {
+            responseType: 'text' as 'json'
+          })
+        );
+      }
+
+      this.followingList = this.followingList.filter(item =>
+        Number(item.followingId) !== Number(followingId)
+        && item.followingUsername.toLowerCase() !== followingUsername.toLowerCase()
       );
-      this.followingList = this.followingList.filter(item => Number(item.followingId) !== Number(followingId));
       await this.fetchFollowCounts();
     } catch (err) {
       console.error('Failed to unfollow', err);
@@ -506,6 +660,112 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     return null;
+  }
+
+  get filteredFollowersList() {
+    const query = (this.followListSearchQuery || '').trim().toLowerCase();
+    if (!query) {
+      return this.followersList;
+    }
+    return this.followersList.filter(user =>
+      user.followerUsername.toLowerCase().includes(query)
+      || user.displayName.toLowerCase().includes(query)
+    );
+  }
+
+  async toggleFollowerRelation(user: {
+    followerId: number;
+    followerUsername: string;
+    relationStatus: 'Follow' | 'Following' | 'Pending';
+    confirmUnfollow: boolean;
+  }) {
+    if (!this.isOwnProfile) {
+      return;
+    }
+
+    if (user.relationStatus === 'Following') {
+      if (!user.confirmUnfollow) {
+        user.confirmUnfollow = true;
+        return;
+      }
+      try {
+        await firstValueFrom(
+          this.api.delete(`/revconnect/users/following/${user.followerId}`, { responseType: 'text' as 'json' })
+        );
+      } catch {
+        await firstValueFrom(
+          this.api.delete(`/revconnect/users/following/username/${encodeURIComponent(user.followerUsername)}`, {
+            responseType: 'text' as 'json'
+          })
+        );
+      }
+      user.relationStatus = 'Follow';
+      user.confirmUnfollow = false;
+      await this.fetchFollowCounts();
+      return;
+    }
+
+    if (user.relationStatus === 'Pending') {
+      return;
+    }
+
+    try {
+      const response = await firstValueFrom(this.api.post<any>(`/follow/request/${user.followerId}`, {}));
+      const mapped = this.mapFollowStatusFromResponse(response);
+      user.relationStatus = mapped;
+      user.confirmUnfollow = false;
+      if (mapped === 'Following') {
+        await this.fetchFollowCounts();
+      }
+    } catch (err: any) {
+      const message = this.extractErrorMessage(err);
+      if (message.includes('already following') || message.includes('already followed')) {
+        user.relationStatus = 'Following';
+        user.confirmUnfollow = false;
+        await this.fetchFollowCounts();
+        return;
+      }
+      if (message.includes('pending') || message.includes('already requested')) {
+        user.relationStatus = 'Pending';
+        user.confirmUnfollow = false;
+        return;
+      }
+      alert('Could not update follow status.');
+    }
+  }
+
+  cancelFollowerUnfollow(user: { confirmUnfollow: boolean }) {
+    user.confirmUnfollow = false;
+  }
+
+  get filteredFollowingList() {
+    const query = (this.followListSearchQuery || '').trim().toLowerCase();
+    if (!query) {
+      return this.followingList;
+    }
+    return this.followingList.filter(user =>
+      user.followingUsername.toLowerCase().includes(query)
+      || user.displayName.toLowerCase().includes(query)
+    );
+  }
+
+  getInitial(username: string): string {
+    const value = (username || '').trim();
+    return value ? value.charAt(0).toUpperCase() : '?';
+  }
+
+  private dedupeByUsername<T>(list: T[], usernameAccessor: (item: T) => string): T[] {
+    const seen = new Set<string>();
+    const deduped: T[] = [];
+    for (const item of list) {
+      const key = usernameAccessor(item).trim().toLowerCase();
+      if (!key || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      deduped.push(item);
+    }
+    return deduped;
   }
 
   private async performUnfollowTarget() {
@@ -567,6 +827,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return 'Pending';
   }
 
+  private extractErrorMessage(err: any): string {
+    const raw = typeof err?.error === 'string'
+      ? err.error
+      : err?.error?.message || err?.message || '';
+    return raw.toString().toLowerCase();
+  }
+
   isScheduledPending(post: any): boolean {
     if (!post?.scheduledAt || post?.isPublished !== false) {
       return false;
@@ -621,7 +888,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     return product.features
-      .split(/\r?\n|,/) 
+      .split(/\r?\n|,/)
       .map(feature => feature.trim())
       .filter(Boolean);
   }
@@ -745,6 +1012,127 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
+  isVideoPost(post: any): boolean {
+    const preview = this.getPostPreviewMedia(post);
+    return preview.type === 'VIDEO';
+  }
+
+  getPostPreviewMedia(post: any): { url: string; type: 'IMAGE' | 'VIDEO' } {
+    const items = this.getPostMediaItems(post);
+    if (items.length > 0) {
+      return items[0];
+    }
+    return { url: '', type: 'IMAGE' };
+  }
+
+  postHasMultipleMedia(post: any): boolean {
+    return this.getPostMediaItems(post).length > 1;
+  }
+
+  get activeGridPosts(): any[] {
+    if (this.activeTab === 'TAGGED') {
+      return this.taggedPosts;
+    }
+    if (this.activeTab === 'SAVED') {
+      return this.savedPostsProfile;
+    }
+    return this.posts;
+  }
+
+  hasNoActiveTabPosts(): boolean {
+    if (this.activeTab === 'TAGGED') {
+      return this.taggedPosts.length === 0;
+    }
+    if (this.activeTab === 'SAVED') {
+      return this.savedPostsProfile.length === 0;
+    }
+    return this.posts.length === 0;
+  }
+
+  openCreatePostFromProfile(event?: Event) {
+    event?.preventDefault();
+    this.createModalService.openCreateModal('POST');
+  }
+
+  openPostPreview(post: any) {
+    this.selectedGridPost = post;
+    this.showPostPreviewModal = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closePostPreview() {
+    this.showPostPreviewModal = false;
+    this.selectedGridPost = null;
+    document.body.style.overflow = '';
+  }
+
+  openProfileShareModal() {
+    this.showProfileShareModal = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeProfileShareModal() {
+    this.showProfileShareModal = false;
+    document.body.style.overflow = '';
+  }
+
+  async copyProfileLink() {
+    const link = this.profileShareLink;
+    if (!link) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(link);
+      alert('Profile link copied.');
+    } catch {
+      alert('Could not copy link.');
+    }
+  }
+
+  async shareProfileNative() {
+    const link = this.profileShareLink;
+    if (!link) {
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && 'share' in navigator) {
+      try {
+        await navigator.share({
+          title: `${this.userProfile?.username || 'RevConnect'} on RevConnect`,
+          text: `Check out this profile on RevConnect`,
+          url: link
+        });
+        return;
+      } catch {
+        // user cancelled / unsupported target
+      }
+    }
+
+    await this.copyProfileLink();
+  }
+
+  async downloadProfileQr() {
+    const qrUrl = this.profileQrCodeUrl;
+    if (!qrUrl) {
+      return;
+    }
+
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${this.userProfile?.username || 'profile'}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      alert('Could not download QR code.');
+    }
+  }
+
   private resetProductForm() {
     this.editingProductId = null;
     this.productForm = {
@@ -760,7 +1148,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   private normalizeFeatures(rawFeatures: string): string {
     return rawFeatures
-      .split(/\r?\n|,/) 
+      .split(/\r?\n|,/)
       .map(feature => feature.trim())
       .filter(Boolean)
       .slice(0, 12)
@@ -791,6 +1179,66 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const bTime = new Date(b.createdAt || 0).getTime();
       return bTime - aTime;
     });
+  }
+
+  private getPostMediaItems(post: any): Array<{ url: string; type: 'IMAGE' | 'VIDEO' }> {
+    const rawMedia = post?.mediaUrl;
+    const fallbackType = (post?.mediaType || '').toString().toUpperCase();
+
+    if (!rawMedia || typeof rawMedia !== 'string') {
+      return [];
+    }
+
+    const trimmed = rawMedia.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          const items = parsed
+            .map(item => {
+              if (typeof item === 'string') {
+                return {
+                  url: item,
+                  type: this.isVideoUrl(item) ? 'VIDEO' as const : 'IMAGE' as const
+                };
+              }
+
+              const url = (item?.url || item?.mediaUrl || '').toString();
+              if (!url) {
+                return null;
+              }
+              const mediaType = (item?.type || item?.mediaType || '').toString().toUpperCase();
+              return {
+                url,
+                type: mediaType === 'VIDEO' || this.isVideoUrl(url) ? 'VIDEO' as const : 'IMAGE' as const
+              };
+            })
+            .filter(Boolean) as Array<{ url: string; type: 'IMAGE' | 'VIDEO' }>;
+
+          if (items.length > 0) {
+            return items;
+          }
+        }
+      } catch {
+        // fallback to single media parsing
+      }
+    }
+
+    return [{
+      url: trimmed,
+      type: fallbackType === 'VIDEO' || this.isVideoUrl(trimmed) ? 'VIDEO' : 'IMAGE'
+    }];
+  }
+
+  private isVideoUrl(url: string): boolean {
+    if (!url) {
+      return false;
+    }
+    if (url.startsWith('data:video/')) {
+      return true;
+    }
+    const normalized = url.split('?')[0].toLowerCase();
+    return ['.mp4', '.webm', '.ogg', '.mov', '.m4v'].some(ext => normalized.endsWith(ext));
   }
 
   private parseRequestedPostId(): number | null {

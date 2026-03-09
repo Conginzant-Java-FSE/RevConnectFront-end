@@ -122,6 +122,37 @@
     font-size: 22px;
 }
 
+.explore-post-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+}
+
+.explore-post-modal {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+}
+
+.explore-modal-close {
+    position: absolute;
+    right: 6px;
+    top: -6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(10, 10, 10, 0.75);
+    color: #fff;
+    z-index: 5;
+}
+
 @media (max-width: 920px) {
     .explore-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));

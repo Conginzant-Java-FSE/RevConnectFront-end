@@ -2,8 +2,8 @@
     <div class="post-header">
         <div class="post-user-info">
             <img [src]="post.authorProfilePicture || '/assets/default-avatar.svg'" [alt]="post.authorUsername || 'User'"
-                class="post-avatar" />
-            <span class="post-username">{{ post.authorUsername }}</span>
+                class="post-avatar profile-link-target" (click)="goToAuthorProfile($event)" />
+            <span class="post-username profile-link-target" (click)="goToAuthorProfile($event)">{{ post.authorUsername }}</span>
             <span class="post-time">- {{ post.createdAt | date:'shortDate' }}</span>
         </div>
         <div class="post-options-wrap" *ngIf="canManagePost">
@@ -16,12 +16,27 @@
         </div>
     </div>
 
-    <div class="post-image-container" *ngIf="post.mediaUrl">
-        <img *ngIf="!isVideoPost" [src]="post.mediaUrl" alt="Post Content" class="post-image"
+    <div class="post-image-container" *ngIf="activeMedia"
+        (touchstart)="handleTouchStart($event)"
+        (touchend)="handleTouchEnd($event)">
+        <img *ngIf="!isVideoPost" [src]="activeMedia?.url" alt="Post Content" class="post-image"
             (dblclick)="handleLikeToggle()" />
-        <video *ngIf="isVideoPost" #postVideo class="post-video" [src]="post.mediaUrl" muted loop playsinline
+        <video *ngIf="isVideoPost" #postVideo class="post-video" [src]="activeMedia?.url" muted loop playsinline
             preload="metadata" (dblclick)="handleLikeToggle()" (loadeddata)="handleVideoReady()" (play)="handleVideoPlay()"
             (pause)="handleVideoPause()" (ended)="handleVideoEnded()" (error)="handleVideoError()"></video>
+        <button *ngIf="hasCarouselMedia" type="button" class="carousel-nav prev" (click)="goToPreviousMedia($event)">
+            &#10094;
+        </button>
+        <button *ngIf="hasCarouselMedia" type="button" class="carousel-nav next" (click)="goToNextMedia($event)">
+            &#10095;
+        </button>
+        <button type="button" class="shop-now-overlay-btn" *ngIf="normalizedShopLink" (click)="openShopLink($event)">
+            Shop now
+        </button>
+        <div class="carousel-dots" *ngIf="hasCarouselMedia">
+            <button type="button" class="carousel-dot" *ngFor="let item of postMediaItems; let i = index"
+                [class.active]="i === currentMediaIndex" (click)="setMediaIndex(i, $event)"></button>
+        </div>
         <div *ngIf="mediaLoadError" class="media-error">{{ mediaLoadError }}</div>
     </div>
 
@@ -30,15 +45,15 @@
             <button class="action-btn" [class.liked]="isLiked" (click)="handleLikeToggle()">
                 {{ isLiked ? '♥' : '♡' }}
             </button>
-            <button class="action-btn" (click)="showComments = !showComments">💬</button>
+            <button class="action-btn" (click)="openCommentsModal()">💬</button>
             <button class="action-btn" (click)="openShareModal()">↗</button>
         </div>
         <button class="action-btn bookmark-btn" [class.liked]="isSaved" (click)="handleSaveToggle()">🔖</button>
     </div>
 
     <div class="action-counters">
-        <span>{{ likeCount }} likes</span>
-        <span>{{ comments.length }} comments</span>
+        <span class="counter-link" (click)="openLikesModal()">{{ likeCount }} likes</span>
+        <span class="counter-link" (click)="openCommentsModal()">{{ comments.length }} comments</span>
         <span>{{ saveCount }} saves</span>
         <span>{{ shareCount }} shares</span>
     </div>
@@ -56,6 +71,9 @@
             Series: <span class="post-username">{{ post.seriesName }}</span>
             <span *ngIf="post.seriesOrder !== null && post.seriesOrder !== undefined">#{{ post.seriesOrder }}</span>
         </div>
+        <button type="button" class="shop-now-btn" *ngIf="normalizedShopLink" (click)="openShopLink($event)">
+            Shop now
+        </button>
 
         <div class="post-comments-view" *ngIf="comments.length > 0 && !showComments" (click)="showComments = true">
             View all {{ comments.length }} comments
@@ -126,3 +144,51 @@
         </div>
     </div>
 </div>
+
+<div class="share-modal-wrap" *ngIf="showLikesModal" (click)="closeLikesModal()">
+    <div class="share-modal glass-panel likes-modal" (click)="$event.stopPropagation()">
+        <h3>Likes</h3>
+        <div class="share-list likes-list">
+            <div *ngIf="loadingLikes" class="share-empty">Loading likes...</div>
+            <div *ngFor="let likeUser of likesUsers" class="like-user-row">
+                <img *ngIf="likeUser.avatarUrl" [src]="likeUser.avatarUrl" [alt]="likeUser.username" class="like-user-avatar" />
+                <div *ngIf="!likeUser.avatarUrl" class="like-user-avatar fallback">{{ likeUser.username.charAt(0).toUpperCase() }}</div>
+                <span class="like-user-name">{{ likeUser.username }}</span>
+            </div>
+            <div *ngIf="!loadingLikes && likesUsers.length === 0" class="share-empty">No likes yet.</div>
+        </div>
+        <div class="share-actions">
+            <button class="post-btn" (click)="closeLikesModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="share-modal-wrap" *ngIf="showCommentsModal" (click)="closeCommentsModal()">
+    <div class="engagement-modal glass-panel" (click)="$event.stopPropagation()">
+        <div class="engagement-media">
+            <img *ngIf="!isVideoPost" [src]="activeMedia?.url" [alt]="post?.authorUsername || 'Post'" class="engagement-media-content" />
+            <video *ngIf="isVideoPost" [src]="activeMedia?.url" class="engagement-media-content" controls playsinline></video>
+        </div>
+        <div class="engagement-side">
+            <div class="engagement-header">
+                <strong>{{ post?.authorUsername }}</strong>
+                <button class="post-btn" (click)="closeCommentsModal()">Close</button>
+            </div>
+            <div class="engagement-comments">
+                <div *ngFor="let comment of comments" class="comment-item">
+                    <span class="post-username">{{ comment.username }}</span>
+                    <span class="comment-text">{{ comment.content }}</span>
+                </div>
+                <div *ngIf="comments.length === 0" class="share-empty">No comments yet.</div>
+            </div>
+            <div class="post-add-comment">
+                <input type="text" placeholder="Add a comment... (you can mention: @username)" class="comment-input"
+                    [(ngModel)]="newComment" (keyup.enter)="handleCommentSubmit()" [disabled]="isSubmitting" />
+                <button class="post-btn" (click)="handleCommentSubmit()" [disabled]="!newComment.trim() || isSubmitting">
+                    Post
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

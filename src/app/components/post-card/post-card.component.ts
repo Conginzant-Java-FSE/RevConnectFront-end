@@ -1,8 +1,9 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -12,12 +13,13 @@ import { firstValueFrom } from 'rxjs';
   templateUrl: './post-card.component.html',
   styleUrl: './post-card.component.css'
 })
-export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
+export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() post: any;
   @ViewChild('postVideo') postVideo?: ElementRef<HTMLVideoElement>;
 
   api = inject(ApiService);
   authService = inject(AuthService);
+  router = inject(Router);
 
   likeCount = 0;
   saveCount = 0;
@@ -30,6 +32,7 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
   isSubmitting = false;
   isSaving = false;
   mediaLoadError = '';
+  currentMediaIndex = 0;
   showPostOptionsMenu = false;
   isEditingPost = false;
   editPostContent = '';
@@ -38,6 +41,10 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
   postActionError = '';
   isPostRemoved = false;
   showShareModal = false;
+  showLikesModal = false;
+  showCommentsModal = false;
+  loadingLikes = false;
+  likesUsers: Array<{ id: number; username: string; avatarUrl: string }> = [];
   shareConnections: Array<{ id: number; username: string; selected: boolean }> = [];
   shareMessage = '';
   isSharing = false;
@@ -45,6 +52,8 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
   private videoObserver?: IntersectionObserver;
   private trackedImpression = false;
   private playbackStartedAt: number | null = null;
+  private touchStartX: number | null = null;
+  private touchStartY: number | null = null;
 
   get currentUser() {
     return this.authService.currentUser;
@@ -58,11 +67,46 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit() {
     if (this.post) {
+      this.currentMediaIndex = 0;
       this.likeCount = this.post.likeCount || 0;
       this.saveCount = this.post.saveCount || 0;
       this.shareCount = this.post.shareCount || 0;
       this.fetchInteractions();
       this.trackPostView();
+    }
+  }
+
+  get normalizedShopLink(): string | null {
+    const raw = (this.post?.productLink || '').toString().trim();
+    if (!raw) {
+      return null;
+    }
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      const parsed = new URL(normalized);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  openShopLink(event: Event) {
+    event.stopPropagation();
+    const link = this.normalizedShopLink;
+    if (!link) {
+      return;
+    }
+    window.open(link, '_blank', 'noopener');
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['post']) {
+      this.currentMediaIndex = 0;
+      this.mediaLoadError = '';
+      setTimeout(() => this.setupVideoAutoplayObserver());
     }
   }
 
@@ -81,11 +125,69 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get isVideoPost(): boolean {
-    const mediaType = (this.post?.mediaType || '').toString().toUpperCase();
-    if (mediaType === 'VIDEO') {
-      return true;
+    return this.activeMedia?.type === 'VIDEO';
+  }
+
+  get postMediaItems(): Array<{ url: string; type: 'IMAGE' | 'VIDEO' }> {
+    const rawMedia = this.post?.mediaUrl;
+    const fallbackType = (this.post?.mediaType || '').toString().toUpperCase();
+    if (!rawMedia) {
+      return [];
     }
-    return this.isVideoUrl(this.post?.mediaUrl);
+
+    if (typeof rawMedia === 'string') {
+      const trimmed = rawMedia.trim();
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed
+              .map(item => {
+                if (typeof item === 'string') {
+                  return {
+                    url: item,
+                    type: this.isVideoUrl(item) ? 'VIDEO' as const : 'IMAGE' as const
+                  };
+                }
+
+                const url = (item?.url || item?.mediaUrl || '').toString();
+                if (!url) {
+                  return null;
+                }
+                const itemType = (item?.type || item?.mediaType || '').toString().toUpperCase();
+                const type = itemType === 'VIDEO' || this.isVideoUrl(url) ? 'VIDEO' as const : 'IMAGE' as const;
+                return { url, type };
+              })
+              .filter(Boolean) as Array<{ url: string; type: 'IMAGE' | 'VIDEO' }>;
+
+            if (normalized.length > 0) {
+              return normalized;
+            }
+          }
+        } catch {
+          // fallback to single-media mode
+        }
+      }
+
+      return [{
+        url: trimmed,
+        type: fallbackType === 'VIDEO' || this.isVideoUrl(trimmed) ? 'VIDEO' : 'IMAGE'
+      }];
+    }
+
+    return [];
+  }
+
+  get hasCarouselMedia(): boolean {
+    return this.postMediaItems.length > 1;
+  }
+
+  get activeMedia(): { url: string; type: 'IMAGE' | 'VIDEO' } | null {
+    if (this.postMediaItems.length === 0) {
+      return null;
+    }
+    const safeIndex = Math.min(Math.max(this.currentMediaIndex, 0), this.postMediaItems.length - 1);
+    return this.postMediaItems[safeIndex];
   }
 
   private isVideoUrl(url: string | undefined): boolean {
@@ -164,6 +266,74 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   handleVideoError() {
     this.mediaLoadError = 'Could not load this video.';
+  }
+
+  goToPreviousMedia(event?: Event) {
+    event?.stopPropagation();
+    if (!this.hasCarouselMedia) {
+      return;
+    }
+    this.currentMediaIndex = (this.currentMediaIndex - 1 + this.postMediaItems.length) % this.postMediaItems.length;
+    this.mediaLoadError = '';
+    setTimeout(() => this.setupVideoAutoplayObserver());
+  }
+
+  goToNextMedia(event?: Event) {
+    event?.stopPropagation();
+    if (!this.hasCarouselMedia) {
+      return;
+    }
+    this.currentMediaIndex = (this.currentMediaIndex + 1) % this.postMediaItems.length;
+    this.mediaLoadError = '';
+    setTimeout(() => this.setupVideoAutoplayObserver());
+  }
+
+  setMediaIndex(index: number, event?: Event) {
+    event?.stopPropagation();
+    if (index < 0 || index >= this.postMediaItems.length) {
+      return;
+    }
+    this.currentMediaIndex = index;
+    this.mediaLoadError = '';
+    setTimeout(() => this.setupVideoAutoplayObserver());
+  }
+
+  handleTouchStart(event: TouchEvent) {
+    const touch = event.touches?.[0];
+    if (!touch) {
+      return;
+    }
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+  }
+
+  handleTouchEnd(event: TouchEvent) {
+    if (!this.hasCarouselMedia || this.touchStartX === null || this.touchStartY === null) {
+      this.touchStartX = null;
+      this.touchStartY = null;
+      return;
+    }
+
+    const touch = event.changedTouches?.[0];
+    if (!touch) {
+      this.touchStartX = null;
+      this.touchStartY = null;
+      return;
+    }
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+    const swipeThreshold = 35;
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) >= swipeThreshold) {
+      if (deltaX < 0) {
+        this.goToNextMedia();
+      } else {
+        this.goToPreviousMedia();
+      }
+    }
+
+    this.touchStartX = null;
+    this.touchStartY = null;
   }
 
   handleVideoPlay() {
@@ -428,8 +598,8 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
           content: note,
           sharedPost: {
             postId,
-            mediaUrl: this.post?.mediaUrl || '',
-            mediaType: this.post?.mediaType || '',
+            mediaUrl: this.activeMedia?.url || this.post?.mediaUrl || '',
+            mediaType: this.activeMedia?.type || this.post?.mediaType || '',
             description: caption,
             authorUsername: author
           }
@@ -493,5 +663,49 @@ export class PostCardComponent implements OnInit, AfterViewInit, OnDestroy {
       watchSeconds: Number(elapsed.toFixed(2)),
       completed
     });
+  }
+
+  async openLikesModal() {
+    const postId = this.post.postId || this.post.id;
+    if (!postId) return;
+
+    this.showLikesModal = true;
+    this.loadingLikes = true;
+    this.likesUsers = [];
+    try {
+      const users = await firstValueFrom(this.api.get<any[]>(`/likes/${postId}/users`));
+      this.likesUsers = (users || []).map(user => ({
+        id: Number(user?.id) || 0,
+        username: (user?.username || '').toString(),
+        avatarUrl: (user?.avatarUrl || '').toString()
+      }));
+    } catch (err) {
+      console.error('Failed to load liked users', err);
+      this.likesUsers = [];
+    } finally {
+      this.loadingLikes = false;
+    }
+  }
+
+  closeLikesModal() {
+    this.showLikesModal = false;
+  }
+
+  openCommentsModal() {
+    this.showCommentsModal = true;
+    this.showComments = true;
+  }
+
+  closeCommentsModal() {
+    this.showCommentsModal = false;
+  }
+
+  async goToAuthorProfile(event: Event) {
+    event.stopPropagation();
+    const username = (this.post?.authorUsername || this.post?.userName || '').toString().trim();
+    if (!username) {
+      return;
+    }
+    await this.router.navigate(['/profile', username]);
   }
 }

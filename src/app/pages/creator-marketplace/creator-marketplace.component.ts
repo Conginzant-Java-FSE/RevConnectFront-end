@@ -34,6 +34,39 @@ export class CreatorMarketplaceComponent implements OnInit {
   applyTarget: any = null;
   pitchMessage = '';
   applying = false;
+  showPromotionDetailsModal = false;
+  promotionTargetType: 'APPLICATION' | 'PROPOSAL' | null = null;
+  promotionTargetId: number | null = null;
+  promotionDetailsSubmitting = false;
+  promotionDetailsForm = {
+    promotionDetails: '',
+    promotionProductImageUrl: '',
+    promotionProductLink: '',
+    promotionBusinessPostId: ''
+  };
+  showPaymentModal = false;
+  paymentTargetType: 'APPLICATION' | 'PROPOSAL' | null = null;
+  paymentTargetId: number | null = null;
+  paymentSubmitting = false;
+  paymentForm = {
+    amount: '',
+    reference: ''
+  };
+  showConfirmationModal = false;
+  confirmationTargetType: 'APPLICATION' | 'PROPOSAL' | null = null;
+  confirmationTargetId: number | null = null;
+  confirmationSubmitting = false;
+  confirmationNote = '';
+  showPromotionPostModal = false;
+  promotionPostTargetType: 'APPLICATION' | 'PROPOSAL' | null = null;
+  promotionPostTargetId: number | null = null;
+  promotionPostSubmitting = false;
+  promotionPostForm = {
+    description: '',
+    hashtags: '',
+    mediaUrl: '',
+    productLink: ''
+  };
 
   creatingOpportunity = false;
   sendingDirectProposal = false;
@@ -255,65 +288,11 @@ export class CreatorMarketplaceComponent implements OnInit {
   }
 
   async startApplicationPromotion(applicationId: number) {
-    const promotionDetails = prompt('Enter promotion details/instructions for creator:')?.trim();
-    if (!promotionDetails) {
-      return;
-    }
-    const promotionProductImageUrl = prompt('Enter product image URL (optional):')?.trim() || '';
-    const promotionProductLink = prompt('Enter product buy link URL (optional):')?.trim() || '';
-    const promotionBusinessPostIdInput = prompt('Enter business post ID to promote (optional):')?.trim() || '';
-    const promotionBusinessPostId = promotionBusinessPostIdInput ? Number(promotionBusinessPostIdInput) : null;
-
-    this.promotionActionApplicationId = applicationId;
-    this.error = '';
-    this.success = '';
-    try {
-      await firstValueFrom(this.creatorService.requestApplicationPromotion(applicationId, {
-        promotionDetails,
-        promotionProductImageUrl: promotionProductImageUrl || undefined,
-        promotionProductLink: promotionProductLink || undefined,
-        promotionBusinessPostId: Number.isFinite(Number(promotionBusinessPostId)) ? Number(promotionBusinessPostId) : null
-      }));
-      this.success = 'Promotion request sent to creator.';
-      if (this.selectedBusinessOpportunityId) {
-        await this.viewApplications(this.selectedBusinessOpportunityId);
-      }
-      await this.loadMyBusinessOpportunities();
-      await this.loadBusinessRoiFunnel();
-    } catch (err: any) {
-      console.error('Failed to start application promotion', err);
-      this.error = err?.error?.message || err?.error || 'Failed to start promotion for application.';
-    } finally {
-      this.promotionActionApplicationId = null;
-    }
+    this.openPromotionDetailsModal('APPLICATION', applicationId);
   }
 
   async completeApplicationPromotion(applicationId: number) {
-    const amountInput = prompt('Enter payment amount (required):');
-    const paymentAmount = Number(amountInput);
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-      this.error = 'Valid payment amount is required.';
-      return;
-    }
-    const paymentReference = prompt('Enter payment reference/transaction id (optional):')?.trim() || '';
-
-    this.promotionActionApplicationId = applicationId;
-    this.error = '';
-    this.success = '';
-    try {
-      await firstValueFrom(this.creatorService.completeApplicationPromotionAndPay(applicationId, paymentAmount, paymentReference));
-      this.success = 'Application marked completed and payment done.';
-      if (this.selectedBusinessOpportunityId) {
-        await this.viewApplications(this.selectedBusinessOpportunityId);
-      }
-      await this.loadMyBusinessOpportunities();
-      await this.loadBusinessRoiFunnel();
-    } catch (err: any) {
-      console.error('Failed to complete application promotion', err);
-      this.error = err?.error?.message || err?.error || 'Failed to complete promotion for application.';
-    } finally {
-      this.promotionActionApplicationId = null;
-    }
+    this.openPaymentModal('APPLICATION', applicationId);
   }
 
   async acceptApplicationPromotion(applicationId: number) {
@@ -333,24 +312,7 @@ export class CreatorMarketplaceComponent implements OnInit {
   }
 
   async confirmApplicationPromotion(applicationId: number) {
-    const confirmationNote = prompt('Enter completion confirmation note for business:')?.trim();
-    if (!confirmationNote) {
-      return;
-    }
-
-    this.promotionActionApplicationId = applicationId;
-    this.error = '';
-    this.success = '';
-    try {
-      await firstValueFrom(this.creatorService.confirmApplicationPromotion(applicationId, confirmationNote));
-      this.success = 'Completion confirmation sent to business.';
-      await this.loadMyApplications();
-    } catch (err: any) {
-      console.error('Failed to confirm application promotion', err);
-      this.error = err?.error?.message || err?.error || 'Failed to send completion confirmation.';
-    } finally {
-      this.promotionActionApplicationId = null;
-    }
+    this.openConfirmationModal('APPLICATION', applicationId);
   }
 
   async closeOpportunity(opportunityId: number) {
@@ -391,62 +353,12 @@ export class CreatorMarketplaceComponent implements OnInit {
 
   async startDirectProposalPromotion(proposalId: number) {
     if (!this.isBusiness) return;
-    const promotionDetails = prompt('Enter promotion details/instructions for creator:')?.trim();
-    if (!promotionDetails) {
-      return;
-    }
-    const promotionProductImageUrl = prompt('Enter product image URL (optional):')?.trim() || '';
-    const promotionProductLink = prompt('Enter product buy link URL (optional):')?.trim() || '';
-    const promotionBusinessPostIdInput = prompt('Enter business post ID to promote (optional):')?.trim() || '';
-    const promotionBusinessPostId = promotionBusinessPostIdInput ? Number(promotionBusinessPostIdInput) : null;
-
-    this.promotionActionProposalId = proposalId;
-    this.error = '';
-    this.success = '';
-
-    try {
-      await firstValueFrom(this.creatorService.requestDirectProposalPromotion(proposalId, {
-        promotionDetails,
-        promotionProductImageUrl: promotionProductImageUrl || undefined,
-        promotionProductLink: promotionProductLink || undefined,
-        promotionBusinessPostId: Number.isFinite(Number(promotionBusinessPostId)) ? Number(promotionBusinessPostId) : null
-      }));
-      this.success = 'Promotion request sent to creator.';
-      await this.loadMySentDirectProposals();
-      await this.loadBusinessRoiFunnel();
-    } catch (err: any) {
-      console.error('Failed to start direct proposal promotion', err);
-      this.error = err?.error?.message || err?.error || 'Failed to start promotion for direct proposal.';
-    } finally {
-      this.promotionActionProposalId = null;
-    }
+    this.openPromotionDetailsModal('PROPOSAL', proposalId);
   }
 
   async completeDirectProposalPromotion(proposalId: number) {
     if (!this.isBusiness) return;
-    const amountInput = prompt('Enter payment amount (required):');
-    const paymentAmount = Number(amountInput);
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-      this.error = 'Valid payment amount is required.';
-      return;
-    }
-    const paymentReference = prompt('Enter payment reference/transaction id (optional):')?.trim() || '';
-
-    this.promotionActionProposalId = proposalId;
-    this.error = '';
-    this.success = '';
-
-    try {
-      await firstValueFrom(this.creatorService.completeDirectProposalPromotionAndPay(proposalId, paymentAmount, paymentReference));
-      this.success = 'Direct proposal marked completed and payment done.';
-      await this.loadMySentDirectProposals();
-      await this.loadBusinessRoiFunnel();
-    } catch (err: any) {
-      console.error('Failed to complete direct proposal promotion', err);
-      this.error = err?.error?.message || err?.error || 'Failed to complete promotion for direct proposal.';
-    } finally {
-      this.promotionActionProposalId = null;
-    }
+    this.openPaymentModal('PROPOSAL', proposalId);
   }
 
   async acceptDirectProposalPromotion(proposalId: number) {
@@ -469,79 +381,15 @@ export class CreatorMarketplaceComponent implements OnInit {
 
   async confirmDirectProposalPromotion(proposalId: number) {
     if (!this.isCreator) return;
-    const confirmationNote = prompt('Enter completion confirmation note for business:')?.trim();
-    if (!confirmationNote) {
-      return;
-    }
-
-    this.promotionActionProposalId = proposalId;
-    this.error = '';
-    this.success = '';
-
-    try {
-      await firstValueFrom(this.creatorService.confirmDirectProposalPromotion(proposalId, confirmationNote));
-      this.success = 'Completion confirmation sent to business.';
-      await this.loadMyReceivedDirectProposals();
-    } catch (err: any) {
-      console.error('Failed to confirm direct promotion completion', err);
-      this.error = err?.error?.message || err?.error || 'Failed to send completion confirmation.';
-    } finally {
-      this.promotionActionProposalId = null;
-    }
+    this.openConfirmationModal('PROPOSAL', proposalId);
   }
 
   async createPromotionPostFromApplication(application: any) {
-    const description = prompt('Enter caption for your promotion post (optional):')?.trim() || '';
-    const hashtags = prompt('Enter hashtags (optional):')?.trim() || '';
-    const mediaUrl = prompt('Enter media URL (leave empty to use business-provided image):')?.trim() || '';
-    const productLink = prompt('Enter product buy link (leave empty to use business link):')?.trim() || '';
-
-    this.promotionActionApplicationId = application?.id ?? null;
-    this.error = '';
-    this.success = '';
-    try {
-      const res = await firstValueFrom(this.creatorService.createPromotionPostFromApplication(application.id, {
-        description: description || undefined,
-        hashtags: hashtags || undefined,
-        mediaUrl: mediaUrl || undefined,
-        mediaType: mediaUrl ? 'IMAGE' : undefined,
-        productLink: productLink || undefined
-      }));
-      this.success = `Promotion post created (Post ID: ${res?.postId ?? 'new'}).`;
-      await this.loadMyApplications();
-    } catch (err: any) {
-      console.error('Failed to create promotion post from application', err);
-      this.error = err?.error?.message || err?.error || 'Failed to create promotion post.';
-    } finally {
-      this.promotionActionApplicationId = null;
-    }
+    this.openPromotionPostModal('APPLICATION', application);
   }
 
   async createPromotionPostFromProposal(proposal: any) {
-    const description = prompt('Enter caption for your promotion post (optional):')?.trim() || '';
-    const hashtags = prompt('Enter hashtags (optional):')?.trim() || '';
-    const mediaUrl = prompt('Enter media URL (leave empty to use business-provided image):')?.trim() || '';
-    const productLink = prompt('Enter product buy link (leave empty to use business link):')?.trim() || '';
-
-    this.promotionActionProposalId = proposal?.id ?? null;
-    this.error = '';
-    this.success = '';
-    try {
-      const res = await firstValueFrom(this.creatorService.createPromotionPostFromProposal(proposal.id, {
-        description: description || undefined,
-        hashtags: hashtags || undefined,
-        mediaUrl: mediaUrl || undefined,
-        mediaType: mediaUrl ? 'IMAGE' : undefined,
-        productLink: productLink || undefined
-      }));
-      this.success = `Promotion post created (Post ID: ${res?.postId ?? 'new'}).`;
-      await this.loadMyReceivedDirectProposals();
-    } catch (err: any) {
-      console.error('Failed to create promotion post from proposal', err);
-      this.error = err?.error?.message || err?.error || 'Failed to create promotion post.';
-    } finally {
-      this.promotionActionProposalId = null;
-    }
+    this.openPromotionPostModal('PROPOSAL', proposal);
   }
 
   async exportRoiCsv() {
@@ -576,5 +424,265 @@ export class CreatorMarketplaceComponent implements OnInit {
 
   trackByProposal(index: number, item: any): number {
     return item?.id || index;
+  }
+
+  isDataImageUrl(url: string | null | undefined): boolean {
+    const value = (url || '').trim().toLowerCase();
+    return value.startsWith('data:image/');
+  }
+
+  openPromotionDetailsModal(type: 'APPLICATION' | 'PROPOSAL', targetId: number) {
+    this.promotionTargetType = type;
+    this.promotionTargetId = targetId;
+    this.promotionDetailsForm = {
+      promotionDetails: '',
+      promotionProductImageUrl: '',
+      promotionProductLink: '',
+      promotionBusinessPostId: ''
+    };
+    this.showPromotionDetailsModal = true;
+  }
+
+  closePromotionDetailsModal() {
+    this.showPromotionDetailsModal = false;
+    this.promotionTargetType = null;
+    this.promotionTargetId = null;
+    this.promotionDetailsSubmitting = false;
+  }
+
+  async submitPromotionDetails() {
+    if (!this.showPromotionDetailsModal || !this.promotionTargetType || !this.promotionTargetId) {
+      return;
+    }
+
+    const details = this.promotionDetailsForm.promotionDetails.trim();
+    if (!details) {
+      this.error = 'Promotion details are required.';
+      return;
+    }
+
+    const payload = {
+      promotionDetails: details,
+      promotionProductImageUrl: this.promotionDetailsForm.promotionProductImageUrl.trim() || undefined,
+      promotionProductLink: this.promotionDetailsForm.promotionProductLink.trim() || undefined,
+      promotionBusinessPostId: this.promotionDetailsForm.promotionBusinessPostId.trim()
+        ? Number(this.promotionDetailsForm.promotionBusinessPostId.trim())
+        : null
+    };
+
+    this.promotionDetailsSubmitting = true;
+    this.error = '';
+    this.success = '';
+    try {
+      if (this.promotionTargetType === 'APPLICATION') {
+        this.promotionActionApplicationId = this.promotionTargetId;
+        await firstValueFrom(this.creatorService.requestApplicationPromotion(this.promotionTargetId, payload));
+        this.success = 'Promotion details sent to creator.';
+        if (this.selectedBusinessOpportunityId) {
+          await this.viewApplications(this.selectedBusinessOpportunityId);
+        }
+        await this.loadMyBusinessOpportunities();
+      } else {
+        this.promotionActionProposalId = this.promotionTargetId;
+        await firstValueFrom(this.creatorService.requestDirectProposalPromotion(this.promotionTargetId, payload));
+        this.success = 'Promotion details sent to creator.';
+        await this.loadMySentDirectProposals();
+      }
+      await this.loadBusinessRoiFunnel();
+      this.closePromotionDetailsModal();
+    } catch (err: any) {
+      console.error('Failed to send promotion details', err);
+      this.error = err?.error?.message || err?.error || 'Failed to send promotion details.';
+    } finally {
+      this.promotionActionApplicationId = null;
+      this.promotionActionProposalId = null;
+      this.promotionDetailsSubmitting = false;
+    }
+  }
+
+  async onPromotionImageFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+    const file = input.files[0];
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result || '').toString());
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    this.promotionDetailsForm.promotionProductImageUrl = base64;
+  }
+
+  openPaymentModal(type: 'APPLICATION' | 'PROPOSAL', targetId: number) {
+    this.paymentTargetType = type;
+    this.paymentTargetId = targetId;
+    this.paymentForm = { amount: '', reference: '' };
+    this.showPaymentModal = true;
+  }
+
+  closePaymentModal() {
+    this.showPaymentModal = false;
+    this.paymentTargetType = null;
+    this.paymentTargetId = null;
+    this.paymentSubmitting = false;
+  }
+
+  async submitPaymentModal() {
+    if (!this.paymentTargetType || !this.paymentTargetId) {
+      return;
+    }
+    const paymentAmount = Number(this.paymentForm.amount);
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      this.error = 'Valid payment amount is required.';
+      return;
+    }
+
+    this.paymentSubmitting = true;
+    this.error = '';
+    this.success = '';
+    try {
+      if (this.paymentTargetType === 'APPLICATION') {
+        this.promotionActionApplicationId = this.paymentTargetId;
+        await firstValueFrom(this.creatorService.completeApplicationPromotionAndPay(
+          this.paymentTargetId,
+          paymentAmount,
+          this.paymentForm.reference.trim()
+        ));
+        this.success = 'Application marked completed and payment done.';
+        if (this.selectedBusinessOpportunityId) {
+          await this.viewApplications(this.selectedBusinessOpportunityId);
+        }
+        await this.loadMyBusinessOpportunities();
+      } else {
+        this.promotionActionProposalId = this.paymentTargetId;
+        await firstValueFrom(this.creatorService.completeDirectProposalPromotionAndPay(
+          this.paymentTargetId,
+          paymentAmount,
+          this.paymentForm.reference.trim()
+        ));
+        this.success = 'Direct proposal marked completed and payment done.';
+        await this.loadMySentDirectProposals();
+      }
+      await this.loadBusinessRoiFunnel();
+      this.closePaymentModal();
+    } catch (err: any) {
+      console.error('Failed to submit payment', err);
+      this.error = err?.error?.message || err?.error || 'Failed to complete payment.';
+    } finally {
+      this.promotionActionApplicationId = null;
+      this.promotionActionProposalId = null;
+      this.paymentSubmitting = false;
+    }
+  }
+
+  openConfirmationModal(type: 'APPLICATION' | 'PROPOSAL', targetId: number) {
+    this.confirmationTargetType = type;
+    this.confirmationTargetId = targetId;
+    this.confirmationNote = '';
+    this.showConfirmationModal = true;
+  }
+
+  closeConfirmationModal() {
+    this.showConfirmationModal = false;
+    this.confirmationTargetType = null;
+    this.confirmationTargetId = null;
+    this.confirmationSubmitting = false;
+  }
+
+  async submitConfirmationModal() {
+    if (!this.confirmationTargetType || !this.confirmationTargetId) {
+      return;
+    }
+    const note = this.confirmationNote.trim();
+    if (!note) {
+      this.error = 'Confirmation note is required.';
+      return;
+    }
+
+    this.confirmationSubmitting = true;
+    this.error = '';
+    this.success = '';
+    try {
+      if (this.confirmationTargetType === 'APPLICATION') {
+        this.promotionActionApplicationId = this.confirmationTargetId;
+        await firstValueFrom(this.creatorService.confirmApplicationPromotion(this.confirmationTargetId, note));
+        this.success = 'Completion confirmation sent to business.';
+        await this.loadMyApplications();
+      } else {
+        this.promotionActionProposalId = this.confirmationTargetId;
+        await firstValueFrom(this.creatorService.confirmDirectProposalPromotion(this.confirmationTargetId, note));
+        this.success = 'Completion confirmation sent to business.';
+        await this.loadMyReceivedDirectProposals();
+      }
+      this.closeConfirmationModal();
+    } catch (err: any) {
+      console.error('Failed to send confirmation', err);
+      this.error = err?.error?.message || err?.error || 'Failed to send completion confirmation.';
+    } finally {
+      this.promotionActionApplicationId = null;
+      this.promotionActionProposalId = null;
+      this.confirmationSubmitting = false;
+    }
+  }
+
+  openPromotionPostModal(type: 'APPLICATION' | 'PROPOSAL', source: any) {
+    this.promotionPostTargetType = type;
+    this.promotionPostTargetId = Number(source?.id) || null;
+    this.promotionPostForm = {
+      description: (source?.promotionDetails || '').toString(),
+      hashtags: '',
+      mediaUrl: (source?.promotionProductImageUrl || '').toString(),
+      productLink: (source?.promotionProductLink || '').toString()
+    };
+    this.showPromotionPostModal = true;
+  }
+
+  closePromotionPostModal() {
+    this.showPromotionPostModal = false;
+    this.promotionPostTargetType = null;
+    this.promotionPostTargetId = null;
+    this.promotionPostSubmitting = false;
+  }
+
+  async submitPromotionPostModal() {
+    if (!this.promotionPostTargetType || !this.promotionPostTargetId) {
+      return;
+    }
+
+    this.promotionPostSubmitting = true;
+    this.error = '';
+    this.success = '';
+    try {
+      const payload = {
+        description: this.promotionPostForm.description.trim() || undefined,
+        hashtags: this.promotionPostForm.hashtags.trim() || undefined,
+        mediaUrl: this.promotionPostForm.mediaUrl.trim() || undefined,
+        mediaType: this.promotionPostForm.mediaUrl.trim() ? 'IMAGE' : undefined,
+        productLink: this.promotionPostForm.productLink.trim() || undefined
+      };
+
+      if (this.promotionPostTargetType === 'APPLICATION') {
+        this.promotionActionApplicationId = this.promotionPostTargetId;
+        const res = await firstValueFrom(this.creatorService.createPromotionPostFromApplication(this.promotionPostTargetId, payload));
+        this.success = `Promotion post created (Post ID: ${res?.postId ?? 'new'}).`;
+        await this.loadMyApplications();
+      } else {
+        this.promotionActionProposalId = this.promotionPostTargetId;
+        const res = await firstValueFrom(this.creatorService.createPromotionPostFromProposal(this.promotionPostTargetId, payload));
+        this.success = `Promotion post created (Post ID: ${res?.postId ?? 'new'}).`;
+        await this.loadMyReceivedDirectProposals();
+      }
+
+      this.closePromotionPostModal();
+    } catch (err: any) {
+      console.error('Failed to create promotion post', err);
+      this.error = err?.error?.message || err?.error || 'Failed to create promotion post.';
+    } finally {
+      this.promotionActionApplicationId = null;
+      this.promotionActionProposalId = null;
+      this.promotionPostSubmitting = false;
+    }
   }
 }

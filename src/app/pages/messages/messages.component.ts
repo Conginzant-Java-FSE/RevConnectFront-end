@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { ActivityBadgeService } from '../../services/activity-badge.service';
 import { firstValueFrom } from 'rxjs';
 import { MessageResponseDTO } from '../../models/message.model';
 
@@ -18,6 +19,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
   api = inject(ApiService);
   router = inject(Router);
+  activityBadgeService = inject(ActivityBadgeService);
 
   partners: any[] = [];
   searchResults: any[] = [];
@@ -29,6 +31,13 @@ export class MessagesComponent implements OnInit, OnDestroy {
   loading = false;
   editingMsgId: number | null = null;
   editContent = '';
+  isMobileView = false;
+  showConversationOnMobile = false;
+  activeInboxTab: 'PRIMARY' | 'REQUESTS' = 'PRIMARY';
+  private followingIds = new Set<number>();
+  private lastSenderByPartner = new Map<number, number>();
+  private approvedRequestIds = new Set<number>();
+  private declinedRequestIds = new Set<number>();
 
   private pollInterval: any;
 
@@ -39,6 +48,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.updateViewportMode();
+    this.loadRequestState();
     this.fetchPartners();
   }
 
@@ -50,8 +61,25 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   async fetchPartners() {
     try {
-      const res = await firstValueFrom(this.api.get<any[]>('/api/messages/partners'));
-      this.partners = this.sortPartners(res || []);
+      const [partnersRes, followingRes] = await Promise.all([
+        firstValueFrom(this.api.get<any[]>('/api/messages/partners')),
+        firstValueFrom(this.api.get<any[]>('/revconnect/users/following')).catch(() => [])
+      ]);
+      this.followingIds = new Set(
+        (followingRes || []).map((entry: any) => Number(entry?.followingId)).filter((id: number) => Number.isFinite(id))
+      );
+
+      const partners = this.sortPartners(partnersRes || []);
+      this.partners = partners;
+
+      await Promise.all(
+        partners.map(async partner => {
+          const senderId = await this.fetchLastSenderId(partner.id);
+          if (senderId) {
+            this.lastSenderByPartner.set(Number(partner.id), Number(senderId));
+          }
+        })
+      );
     } catch (err) {
       console.error("Failed to load partners", err);
     }
@@ -76,6 +104,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.activeContact = contact;
     this.searchQuery = '';
     this.searchResults = [];
+    if (this.isMobileView) {
+      this.showConversationOnMobile = true;
+    }
 
     // If they aren't in the partners list yet, temporarily add them to the top so UI updates
     if (!this.partners.find(p => p.id === contact.id)) {
@@ -88,6 +119,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
     // Start polling for this contact
     this.startPolling(contact.id);
+  }
+
+  goBackToContacts() {
+    this.showConversationOnMobile = false;
   }
 
   startPolling(contactId: number) {
@@ -111,6 +146,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     try {
       const res = await firstValueFrom(this.api.get<MessageResponseDTO[]>(`/api/messages/conversation/${userId}`));
       const newData = res || [];
+      this.activityBadgeService.refreshMessages();
 
       const prevLast = this.conversation[this.conversation.length - 1];
       const newLast = newData[newData.length - 1];
@@ -143,9 +179,11 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
     try {
       await firstValueFrom(this.api.post(`/api/messages/send/${this.activeContact.id}`, { content }));
+      this.approveRequest(this.activeContact);
       // Instantly fetch the updated convo
       this.fetchConversation(this.activeContact.id, false);
       this.fetchPartners(); // bump partner to top if necessary
+      this.activityBadgeService.refreshMessages();
     } catch (err) {
       console.error("Failed to send message", err);
       alert("Message failed to send.");
@@ -230,5 +268,130 @@ export class MessagesComponent implements OnInit, OnDestroy {
       }
       return (a?.username || '').localeCompare(b?.username || '');
     });
+  }
+
+  get primaryPartners(): any[] {
+    return this.partners.filter(partner => {
+      const id = Number(partner?.id);
+      if (!id || this.declinedRequestIds.has(id)) {
+        return false;
+      }
+      const isFollowing = this.followingIds.has(id);
+      const isInbound = this.lastSenderByPartner.get(id) === id;
+      const isRequest = !isFollowing && isInbound && !this.approvedRequestIds.has(id);
+      const isGeneral = !isFollowing && !isInbound;
+      return !isRequest && !isGeneral;
+    });
+  }
+
+  get requestPartners(): any[] {
+    return this.partners.filter(partner => {
+      const id = Number(partner?.id);
+      if (!id || this.declinedRequestIds.has(id)) {
+        return false;
+      }
+      const isFollowing = this.followingIds.has(id);
+      const isInbound = this.lastSenderByPartner.get(id) === id;
+      return !isFollowing && isInbound && !this.approvedRequestIds.has(id);
+    });
+  }
+
+  get visiblePartners(): any[] {
+    if (this.searchQuery.trim()) {
+      return [];
+    }
+    if (this.activeInboxTab === 'REQUESTS') {
+      return this.requestPartners;
+    }
+    return this.primaryPartners;
+  }
+
+  isActiveContactRequest(): boolean {
+    const id = Number(this.activeContact?.id);
+    return !!id && this.requestPartners.some(p => Number(p?.id) === id);
+  }
+
+  approveRequest(contact: any) {
+    const id = Number(contact?.id);
+    if (!id) {
+      return;
+    }
+    this.approvedRequestIds.add(id);
+    this.declinedRequestIds.delete(id);
+    this.persistRequestState();
+    this.activeInboxTab = 'PRIMARY';
+  }
+
+  declineRequest(contact: any) {
+    const id = Number(contact?.id);
+    if (!id) {
+      return;
+    }
+    this.declinedRequestIds.add(id);
+    this.approvedRequestIds.delete(id);
+    this.persistRequestState();
+    if (Number(this.activeContact?.id) === id) {
+      this.activeContact = null;
+      this.conversation = [];
+    }
+  }
+
+  private async fetchLastSenderId(partnerId: number): Promise<number | null> {
+    try {
+      const conversation = await firstValueFrom(this.api.get<MessageResponseDTO[]>(`/api/messages/conversation/${partnerId}`));
+      const last = (conversation || [])[conversation.length - 1];
+      if (!last?.senderId) {
+        return null;
+      }
+      return Number(last.senderId);
+    } catch {
+      return null;
+    }
+  }
+
+  private loadRequestState() {
+    const userId = Number(this.user?.id) || 0;
+    if (!userId) {
+      return;
+    }
+    this.approvedRequestIds = this.readIdSet(`msg-approved-${userId}`);
+    this.declinedRequestIds = this.readIdSet(`msg-declined-${userId}`);
+  }
+
+  private persistRequestState() {
+    const userId = Number(this.user?.id) || 0;
+    if (!userId) {
+      return;
+    }
+    localStorage.setItem(`msg-approved-${userId}`, JSON.stringify(Array.from(this.approvedRequestIds)));
+    localStorage.setItem(`msg-declined-${userId}`, JSON.stringify(Array.from(this.declinedRequestIds)));
+  }
+
+  private readIdSet(key: string): Set<number> {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        return new Set<number>();
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        return new Set<number>();
+      }
+      return new Set<number>(parsed.map(v => Number(v)).filter(v => Number.isFinite(v)));
+    } catch {
+      return new Set<number>();
+    }
+  }
+
+  @HostListener('window:resize')
+  onResize() {
+    this.updateViewportMode();
+  }
+
+  private updateViewportMode() {
+    this.isMobileView = typeof window !== 'undefined' && window.innerWidth <= 860;
+    if (!this.isMobileView) {
+      this.showConversationOnMobile = false;
+    }
   }
 }
