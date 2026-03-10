@@ -26,6 +26,7 @@
                     muted
                     playsinline
                     controls
+                    (ended)="handleStoryVideoEnded()"
                 ></video>
                 <button class="story-nav-zone right" (click)="handleViewNext()" aria-label="Next story"></button>
             </div>
@@ -133,8 +134,8 @@
 
                 <ng-container *ngIf="createSubMode === 'STORY'">
                     <div class="form-group">
-                        <label>Upload Image</label>
-                        <input type="file" accept="image/*" (change)="handleFileChange($event)" />
+                        <label>Upload Story Media</label>
+                        <input type="file" accept="image/*,video/*" (change)="handleFileChange($event)" />
                     </div>
 
                     <div class="form-group" *ngIf="isCreatorUser">
@@ -145,8 +146,9 @@
                     </div>
 
                     <div class="story-preview-box">
-                        <img *ngIf="mediaUrl" [src]="mediaUrl" alt="Preview" />
-                        <span *ngIf="!mediaUrl">Image Preview</span>
+                        <img *ngIf="mediaUrl && mediaType !== 'VIDEO'" [src]="mediaUrl" alt="Preview" />
+                        <video *ngIf="mediaUrl && mediaType === 'VIDEO'" [src]="mediaUrl" controls muted playsinline></video>
+                        <span *ngIf="!mediaUrl">Story Preview</span>
                     </div>
 
                     <button type="submit" class="story-submit-btn" [disabled]="loading || !mediaUrl">

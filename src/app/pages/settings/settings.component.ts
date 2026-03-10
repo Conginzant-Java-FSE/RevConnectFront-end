@@ -146,12 +146,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.savingAccount = true;
     try {
-      await firstValueFrom(this.api.put('/settings/account', { username, email }, { responseType: 'text' as 'json' }));
-      if (this.user) {
-        const updatedUser = { ...this.user, username, email };
+      const response: any = await firstValueFrom(this.api.put('/settings/account', { username, email }));
+      if (response?.token) {
+        localStorage.setItem('token', response.token);
+      }
+
+      const updatedUser = response?.user || (this.user ? { ...this.user, username, email } : null);
+      if (updatedUser) {
         this.authService.updateUser(updatedUser);
       }
-      alert('Account details updated successfully.');
+
+      alert(response?.message || 'Account details updated successfully.');
     } catch (err: any) {
       console.error('Failed to update account details', err);
       alert(err?.error || 'Failed to update account details.');

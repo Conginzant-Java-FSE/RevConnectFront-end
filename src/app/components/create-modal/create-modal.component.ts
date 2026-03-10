@@ -20,6 +20,7 @@ type SelectedMediaItem = {
     styleUrl: './create-modal.component.css'
 })
 export class CreateModalComponent implements OnChanges, OnDestroy {
+    private static readonly MAX_MEDIA_SIZE_MB = 1024;
     @Input() isOpen = false;
     @Input() mode: 'create' | 'view' = 'create';
     @Input() activeStory: any = null;
@@ -95,7 +96,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
     }
 
     get acceptedMediaTypes(): string {
-        return this.createSubMode === 'POST' ? 'image/*,video/*' : 'image/*';
+        return this.createSubMode === 'POST' ? 'image/*,video/*' : 'image/*,video/*';
     }
 
     get activeMedia() {
@@ -141,16 +142,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
 
     setCreateSubMode(mode: 'POST' | 'STORY') {
         this.createSubMode = mode;
-
         this.error = '';
-        if (mode === 'STORY' && this.selectedMedia.some(item => item.type === 'VIDEO')) {
-            this.selectedMedia = this.selectedMedia.filter(item => item.type === 'IMAGE').slice(0, 1);
-            this.activeMediaIndex = 0;
-            const active = this.selectedMedia[0];
-            this.mediaUrl = active?.url || '';
-            this.mediaType = active?.type || 'IMAGE';
-            this.error = 'Stories currently support images only. Please choose an image.';
-        }
 
         if (mode === 'STORY') {
             this.scheduleEnabled = false;
@@ -186,45 +178,55 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
             if (!firstFile) {
                 return;
             }
-            if (firstFile.type.startsWith('video/')) {
-                this.error = 'Stories currently support images only. Please choose an image.';
+            if (firstFile.size > CreateModalComponent.MAX_MEDIA_SIZE_MB * 1024 * 1024) {
+                const message = 'Size is more. Max 1GB only.';
+                this.error = message;
+                alert(message);
                 return;
             }
 
             this.revokeObjectUrls();
             const previewUrl = URL.createObjectURL(firstFile);
+            const storyType: 'IMAGE' | 'VIDEO' = firstFile.type.startsWith('video/') ? 'VIDEO' : 'IMAGE';
             const storyItem: SelectedMediaItem = {
                 url: previewUrl,
-                type: 'IMAGE',
+                type: storyType,
                 sourceFile: firstFile,
                 objectUrl: true
             };
             this.selectedMedia = [storyItem];
             this.activeMediaIndex = 0;
             this.mediaUrl = previewUrl;
-            this.mediaType = 'IMAGE';
+            this.mediaType = storyType;
             this.error = '';
             return;
         }
 
-        const fileReaders = files.map(file => this.readFile(file).then(url => ({
-            url,
+        const oversizedMedia = files.find(
+            file => file.size > CreateModalComponent.MAX_MEDIA_SIZE_MB * 1024 * 1024
+        );
+        if (oversizedMedia) {
+            const message = 'Size is more. Max 1GB only.';
+            this.error = message;
+            alert(message);
+            return;
+        }
+
+        const selected = files.map(file => ({
+            url: URL.createObjectURL(file),
             type: file.type.startsWith('video/') ? 'VIDEO' as const : 'IMAGE' as const,
-            sourceFile: file
-        })));
+            sourceFile: file,
+            objectUrl: true
+        }));
 
-        Promise.all(fileReaders).then(items => {
-            let selected = items;
-            this.selectedMedia = [...this.selectedMedia, ...selected];
-
-            if (this.selectedMedia.length > 0) {
-                this.activeMediaIndex = Math.max(0, this.selectedMedia.length - selected.length);
-                const active = this.selectedMedia[this.activeMediaIndex];
-                this.mediaUrl = active.url;
-                this.mediaType = active.type;
-                this.error = '';
-            }
-        });
+        this.selectedMedia = [...this.selectedMedia, ...selected];
+        if (this.selectedMedia.length > 0) {
+            this.activeMediaIndex = Math.max(0, this.selectedMedia.length - selected.length);
+            const active = this.selectedMedia[this.activeMediaIndex];
+            this.mediaUrl = active.url;
+            this.mediaType = active.type;
+            this.error = '';
+        }
     }
 
     get storySegments(): number[] {
@@ -257,19 +259,29 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
                 const active = this.selectedMedia[0];
                 let storyMediaUrl = this.mediaUrl;
                 if (active?.sourceFile) {
-                    storyMediaUrl = await this.prepareStoryUploadMedia(active.sourceFile);
+                    storyMediaUrl = await this.prepareStoryUploadMedia(active.sourceFile, active.type);
                 }
                 await firstValueFrom(this.api.post('/stories', {
                     mediaUrl: storyMediaUrl,
-                    mediaType: 'IMAGE',
+                    mediaType: active?.type || this.mediaType || 'IMAGE',
                     subscriberOnly: this.isCreatorUser ? this.subscriberOnlyStory : false
                 }));
             } else {
                 const mediaBatch = this.selectedMedia.length > 0
                     ? this.selectedMedia
                     : [{ url: this.mediaUrl, type: this.mediaType }];
-                const payloadMediaUrl = mediaBatch.length > 1 ? JSON.stringify(mediaBatch) : mediaBatch[0].url;
-                const payloadMediaType = mediaBatch.length > 1 ? 'CAROUSEL' : mediaBatch[0].type;
+                const uploadMediaBatch = await Promise.all(
+                    mediaBatch.map(async (item: SelectedMediaItem | { url: string; type: 'IMAGE' | 'VIDEO' }) => ({
+                        url: await this.preparePostUploadMedia(item),
+                        type: item.type
+                    }))
+                );
+                const payloadMediaUrl = uploadMediaBatch.length > 1
+                    ? JSON.stringify(uploadMediaBatch)
+                    : uploadMediaBatch[0].url;
+                const payloadMediaType = uploadMediaBatch.length > 1
+                    ? 'CAROUSEL'
+                    : uploadMediaBatch[0].type;
 
                 await firstValueFrom(this.api.post('/revconnect/users/addPost', {
                     mediaUrl: payloadMediaUrl,
@@ -316,7 +328,12 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
             this.closeModal();
         } catch (err) {
             console.error(err);
-            this.error = `Failed to post ${this.createSubMode.toLowerCase()}. Please try again.`;
+            const serverMessage = (err as any)?.error?.message
+                || (typeof (err as any)?.error === 'string' ? (err as any).error : '');
+            this.error = serverMessage || `Failed to post ${this.createSubMode.toLowerCase()}. Please try again.`;
+            if (this.error.toLowerCase().includes('max 1gb')) {
+                alert(this.error);
+            }
         } finally {
             this.loading = false;
         }
@@ -329,6 +346,9 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
 
     private startAutoAdvanceTimer() {
         this.clearAutoAdvanceTimer();
+        if (this.viewStoryIsVideo) {
+            return;
+        }
         this.autoAdvanceTimer = setTimeout(() => {
             this.onViewStoryAdvance.emit();
         }, 5000);
@@ -392,6 +412,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
         if (index < 0 || index >= this.selectedMedia.length) {
             return;
         }
+        this.revokeItemObjectUrl(this.selectedMedia[index]);
         this.selectedMedia.splice(index, 1);
         if (this.selectedMedia.length === 0) {
             this.activeMediaIndex = 0;
@@ -592,13 +613,25 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
 
     private revokeObjectUrls() {
         for (const item of this.selectedMedia) {
-            if (item.objectUrl && item.url) {
-                URL.revokeObjectURL(item.url);
-            }
+            this.revokeItemObjectUrl(item);
         }
     }
 
-    private async prepareStoryUploadMedia(file: File): Promise<string> {
+    private revokeItemObjectUrl(item: SelectedMediaItem | null | undefined) {
+        if (item?.objectUrl && item.url) {
+            URL.revokeObjectURL(item.url);
+        }
+    }
+
+    handleStoryVideoEnded() {
+        this.handleViewNext();
+    }
+
+    private async prepareStoryUploadMedia(file: File, mediaType: 'IMAGE' | 'VIDEO'): Promise<string> {
+        if (mediaType === 'VIDEO') {
+            return this.readFile(file);
+        }
+
         const maxSizeBytes = 750 * 1024;
         const maxDimension = 1080;
         const quality = 0.8;
@@ -615,6 +648,14 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
             // Fallback: keep upload resilient even if optimization fails.
             return this.readFile(file);
         }
+    }
+
+    private async preparePostUploadMedia(item: SelectedMediaItem | { url: string; type: 'IMAGE' | 'VIDEO' }): Promise<string> {
+        const sourceFile = (item as SelectedMediaItem).sourceFile;
+        if (sourceFile) {
+            return this.readFile(sourceFile);
+        }
+        return item.url;
     }
 
     private async compressImageFile(file: File, maxDimension: number, quality: number): Promise<File> {
