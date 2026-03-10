@@ -1329,8 +1329,15 @@
 }
 
 .post-preview-modal {
+    position: relative;
     width: 100%;
     max-width: 640px;
+}
+
+.post-preview-modal .modal-close-btn {
+    top: -12px;
+    right: -12px;
+    z-index: 40;
 }
 
 .profile-share-modal {

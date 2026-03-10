@@ -62,7 +62,20 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   get canManagePost(): boolean {
     const ownerId = Number(this.post?.userId || this.post?.user?.id);
     const loggedInId = Number(this.currentUser?.id);
-    return !!ownerId && !!loggedInId && ownerId === loggedInId;
+    if (!!ownerId && !!loggedInId && ownerId === loggedInId) {
+      return true;
+    }
+
+    const ownerUsername = (this.post?.authorUsername || this.post?.userName || this.post?.user?.username || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+    const loggedInUsername = (this.currentUser?.username || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    return !!ownerUsername && !!loggedInUsername && ownerUsername === loggedInUsername;
   }
 
   ngOnInit() {

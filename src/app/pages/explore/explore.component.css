@@ -142,15 +142,15 @@
 
 .explore-modal-close {
     position: absolute;
-    right: 6px;
-    top: -6px;
+    right: -10px;
+    top: -10px;
     width: 32px;
     height: 32px;
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.25);
     background: rgba(10, 10, 10, 0.75);
     color: #fff;
-    z-index: 5;
+    z-index: 40;
 }
 
 @media (max-width: 920px) {
