@@ -2,12 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs "NodeJS18"
-    }
-
-    environment {
-        BUILD_DIR = "dist/revconnect-angular/browser"
-        REMOTE_DIR = "/usr/share/nginx/html"
+        nodejs "Node18"
     }
 
     stages {
@@ -35,30 +30,28 @@ pipeline {
                 sshPublisher(
                     publishers: [
                         sshPublisherDesc(
-                            configName: "frontend-server",
-                            verbose: true,
+                            configName: "frontend-ec2",
                             transfers: [
                                 sshTransfer(
-                                    sourceFiles: "dist/revconnect-angular/browser/**",
-                                    removePrefix: "dist/revconnect-angular/browser",
-                                    remoteDirectory: "/usr/share/nginx/html",
-                                    execCommand: "sudo systemctl restart nginx"
+                                    sourceFiles: "dist/**",
+                                    removePrefix: "dist",
+                                    remoteDirectory: "/home/ec2-user/angular-build",
+                                    execCommand: """
+                                    echo "Cleaning old nginx files..."
+                                    sudo rm -rf /usr/share/nginx/html/*
+
+                                    echo "Copying new Angular build..."
+                                    sudo cp -r /home/ec2-user/angular-build/* /usr/share/nginx/html/
+
+                                    echo "Restarting nginx..."
+                                    sudo systemctl restart nginx
+                                    """
                                 )
                             ]
                         )
                     ]
                 )
             }
-        }
-
-    }
-
-    post {
-        success {
-            echo "Frontend deployed successfully"
-        }
-        failure {
-            echo "Frontend deployment failed"
         }
     }
 }
