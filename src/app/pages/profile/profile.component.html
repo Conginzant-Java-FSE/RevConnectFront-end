@@ -471,10 +471,39 @@
     </div>
   </div>
 
-  <div class="product-modal-overlay animate-fade-in" *ngIf="showPostPreviewModal" (click)="closePostPreview()">
+  <div class="product-modal-overlay animate-fade-in post-preview-overlay" *ngIf="showPostPreviewModal" (click)="closePostPreview()">
     <div class="post-preview-modal" (click)="$event.stopPropagation()">
-      <button class="modal-close-btn" (click)="closePostPreview()">x</button>
-      <app-post-card *ngIf="selectedGridPost" [post]="selectedGridPost"></app-post-card>
+      <button class="modal-close-btn preview-close-btn" (click)="closePostPreview()">x</button>
+      <div class="post-preview-mobile-header">
+        <button type="button" class="preview-back-btn" (click)="closePostPreview()" aria-label="Back">
+          &#x2039;
+        </button>
+        <div class="preview-title">
+          <span>Posts</span>
+          <small>{{ userProfile?.username }}</small>
+        </div>
+        <button type="button" class="preview-menu-btn" (click)="togglePostPreviewMenu($event)" aria-label="Post options">
+          &#x2026;
+        </button>
+        <div class="preview-menu" *ngIf="showPostPreviewMenu && canManageSelectedPost()" (click)="$event.stopPropagation()">
+          <button type="button" class="preview-menu-item" (click)="postPreviewCard?.startEditPost($event); showPostPreviewMenu = false">
+            Edit post
+          </button>
+          <button type="button" class="preview-menu-item danger" (click)="postPreviewCard?.handleDeletePost($event); showPostPreviewMenu = false">
+            Delete post
+          </button>
+        </div>
+      </div>
+      <div class="post-preview-body" (click)="showPostPreviewMenu = false">
+        <app-post-card
+          #postPreviewCard
+          class="post-preview-card"
+          *ngIf="selectedGridPost"
+          [post]="selectedGridPost"
+          [showMobileBack]="true"
+          (mobileBack)="closePostPreview()"
+        ></app-post-card>
+      </div>
     </div>
   </div>
 

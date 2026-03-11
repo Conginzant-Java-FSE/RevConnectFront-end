@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -15,6 +15,8 @@ import { firstValueFrom } from 'rxjs';
 })
 export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() post: any;
+  @Input() showMobileBack = false;
+  @Output() mobileBack = new EventEmitter<void>();
   @ViewChild('postVideo') postVideo?: ElementRef<HTMLVideoElement>;
 
   api = inject(ApiService);
@@ -43,6 +45,11 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   showShareModal = false;
   showLikesModal = false;
   showCommentsModal = false;
+  private sheetDragStartY: number | null = null;
+  private sheetDragType: 'likes' | 'comments' | null = null;
+  isSheetDragging = false;
+  likesSheetOffset = 0;
+  commentsSheetOffset = 0;
   loadingLikes = false;
   likesUsers: Array<{ id: number; username: string; avatarUrl: string }> = [];
   shareConnections: Array<{ id: number; username: string; selected: boolean }> = [];
@@ -702,6 +709,8 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
 
   closeLikesModal() {
     this.showLikesModal = false;
+    this.likesSheetOffset = 0;
+    this.isSheetDragging = false;
   }
 
   openCommentsModal() {
@@ -711,6 +720,72 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
 
   closeCommentsModal() {
     this.showCommentsModal = false;
+    this.commentsSheetOffset = 0;
+    this.isSheetDragging = false;
+  }
+
+  onSheetTouchStart(type: 'likes' | 'comments', event: TouchEvent) {
+    const touch = event.touches?.[0];
+    if (!touch) {
+      return;
+    }
+    this.sheetDragStartY = touch.clientY;
+    this.sheetDragType = type;
+    this.isSheetDragging = true;
+  }
+
+  onSheetTouchMove(type: 'likes' | 'comments', event: TouchEvent) {
+    if (this.sheetDragStartY === null || this.sheetDragType !== type) {
+      return;
+    }
+    const touch = event.touches?.[0];
+    if (!touch) {
+      return;
+    }
+    const delta = Math.max(0, touch.clientY - this.sheetDragStartY);
+    if (type === 'likes') {
+      this.likesSheetOffset = delta;
+    } else {
+      this.commentsSheetOffset = delta;
+    }
+  }
+
+  onSheetTouchEnd(type: 'likes' | 'comments', event: TouchEvent) {
+    if (this.sheetDragStartY === null || this.sheetDragType !== type) {
+      return;
+    }
+    const target = event.currentTarget as HTMLElement | null;
+    const height = target?.clientHeight || 0;
+    const offset = type === 'likes' ? this.likesSheetOffset : this.commentsSheetOffset;
+    const threshold = Math.min(160, Math.max(120, height * 0.25));
+    if (offset > threshold) {
+      if (type === 'likes') {
+        this.closeLikesModal();
+      } else {
+        this.closeCommentsModal();
+      }
+    } else {
+      if (type === 'likes') {
+        this.likesSheetOffset = 0;
+      } else {
+        this.commentsSheetOffset = 0;
+      }
+    }
+    this.sheetDragStartY = null;
+    this.sheetDragType = null;
+    this.isSheetDragging = false;
+  }
+
+  getSheetTransform(type: 'likes' | 'comments'): string {
+    const offset = type === 'likes' ? this.likesSheetOffset : this.commentsSheetOffset;
+    return `translateY(${offset}px)`;
+  }
+
+  getSheetTransition(type: 'likes' | 'comments'): string {
+    if (this.isSheetDragging && this.sheetDragType === type) {
+      return 'none';
+    }
+    return 'transform 0.22s ease';
   }
 
   async goToAuthorProfile(event: Event) {

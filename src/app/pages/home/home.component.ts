@@ -31,6 +31,8 @@ export class HomeComponent implements OnInit {
   storyCreateDefaultSubMode: 'POST' | 'STORY' = 'STORY';
   storyQueue: any[] = [];
   storyQueueIndex = -1;
+  storyUserQueue: any[] = [];
+  storyUserIndex = -1;
   private seenStoryIds = new Set<number>();
 
   get user() {
@@ -89,24 +91,23 @@ export class HomeComponent implements OnInit {
     this.activeStoryView = null;
     this.storyQueue = [];
     this.storyQueueIndex = -1;
+    this.storyUserQueue = [];
+    this.storyUserIndex = -1;
     this.isStoryModalOpen = true;
   }
 
   handleOpenStoryView(userStoryBucket: any) {
-    const userStories = Array.isArray(userStoryBucket?.stories) ? userStoryBucket.stories : [];
-    if (userStories.length === 0) {
+    this.storyUserQueue = Array.isArray(this.storyUsers) ? [...this.storyUsers] : [];
+    const targetKey = `${userStoryBucket?.userId || userStoryBucket?.username || userStoryBucket?.id}`;
+    const selectedIndex = this.storyUserQueue.findIndex(bucket =>
+      `${bucket?.userId || bucket?.username || bucket?.id}` === targetKey
+    );
+    this.storyUserIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    if (!this.openStoryBucketAt(this.storyUserIndex, true)) {
       return;
     }
 
-    this.storyQueue = [...userStories].sort(
-      (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-    );
-    const firstUnseenIndex = this.storyQueue.findIndex(story => !this.seenStoryIds.has(Number(story.id)));
-    this.storyQueueIndex = firstUnseenIndex >= 0 ? firstUnseenIndex : 0;
-
     this.storyModalMode = 'view';
-    this.activeStoryView = this.storyQueue[this.storyQueueIndex];
-    this.markStorySeen(this.activeStoryView);
     this.isStoryModalOpen = true;
     this.buildStoryUsers();
   }
@@ -116,6 +117,8 @@ export class HomeComponent implements OnInit {
     this.activeStoryView = null;
     this.storyQueue = [];
     this.storyQueueIndex = -1;
+    this.storyUserQueue = [];
+    this.storyUserIndex = -1;
   }
 
   handleStoryAdvance() {
@@ -125,7 +128,9 @@ export class HomeComponent implements OnInit {
 
     const nextIndex = this.storyQueueIndex + 1;
     if (nextIndex >= this.storyQueue.length) {
-      this.handleStoryModalClose();
+      if (!this.advanceToNextUserStory()) {
+        this.handleStoryModalClose();
+      }
       return;
     }
 
@@ -142,11 +147,64 @@ export class HomeComponent implements OnInit {
 
     const prevIndex = this.storyQueueIndex - 1;
     if (prevIndex < 0) {
+      this.advanceToPreviousUserStory();
       return;
     }
 
     this.storyQueueIndex = prevIndex;
     this.activeStoryView = this.storyQueue[this.storyQueueIndex];
+  }
+
+  private openStoryBucketAt(index: number, preferFirstUnseen: boolean): boolean {
+    const bucket = this.storyUserQueue[index];
+    const userStories = Array.isArray(bucket?.stories) ? bucket.stories : [];
+    if (userStories.length === 0) {
+      return false;
+    }
+
+    this.storyQueue = [...userStories].sort(
+      (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+    );
+
+    let startIndex = 0;
+    if (preferFirstUnseen) {
+      const firstUnseenIndex = this.storyQueue.findIndex(story => !this.seenStoryIds.has(Number(story.id)));
+      startIndex = firstUnseenIndex >= 0 ? firstUnseenIndex : 0;
+    }
+
+    this.storyQueueIndex = startIndex;
+    this.activeStoryView = this.storyQueue[this.storyQueueIndex];
+    this.markStorySeen(this.activeStoryView);
+    return true;
+  }
+
+  private advanceToNextUserStory(): boolean {
+    if (!this.storyUserQueue.length) {
+      return false;
+    }
+    for (let i = this.storyUserIndex + 1; i < this.storyUserQueue.length; i++) {
+      if (this.openStoryBucketAt(i, true)) {
+        this.storyUserIndex = i;
+        this.buildStoryUsers();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private advanceToPreviousUserStory(): boolean {
+    if (!this.storyUserQueue.length) {
+      return false;
+    }
+    for (let i = this.storyUserIndex - 1; i >= 0; i--) {
+      if (this.openStoryBucketAt(i, false)) {
+        this.storyUserIndex = i;
+        this.storyQueueIndex = Math.max(0, this.storyQueue.length - 1);
+        this.activeStoryView = this.storyQueue[this.storyQueueIndex];
+        return true;
+      }
+    }
+    return false;
   }
 
   private buildStoryUsers() {
