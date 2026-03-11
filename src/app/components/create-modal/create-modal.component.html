@@ -12,7 +12,13 @@
                         {{ activeStory.createdAt | date:'shortTime' }}
                     </span>
                 </div>
-                <button class="story-close-btn" (click)="closeModal()">&times;</button>
+                <div class="story-viewer-actions">
+                    <button *ngIf="canDeleteStory" class="story-delete-btn" (click)="handleDeleteStory($event)"
+                        [disabled]="isDeletingStory">
+                        {{ isDeletingStory ? 'Deleting...' : 'Delete' }}
+                    </button>
+                    <button class="story-close-btn" (click)="closeModal()">&times;</button>
+                </div>
             </div>
 
             <div class="story-media-container">

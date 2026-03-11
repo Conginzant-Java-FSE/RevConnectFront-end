@@ -36,6 +36,20 @@
     gap: 10px;
 }
 
+.post-mobile-back {
+    display: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    font-size: 22px;
+    line-height: 1;
+    align-items: center;
+    justify-content: center;
+}
+
 .post-avatar {
     width: 34px;
     height: 34px;
@@ -66,8 +80,12 @@
 
 .post-options {
     color: var(--text-muted);
-    font-size: 15px;
-    padding: 4px 8px;
+    font-size: 20px;
+    padding: 6px 10px;
+    min-width: 34px;
+    min-height: 30px;
+    line-height: 1;
+    letter-spacing: 1px;
     border-radius: 6px;
     transition: background 0.2s, color 0.2s;
 }
@@ -114,7 +132,7 @@
 .post-image-container {
     position: relative;
     width: 100%;
-    max-height: 560px;
+    height: clamp(260px, 60vh, 560px);
     background: var(--bg-deep);
     display: flex;
     justify-content: center;
@@ -126,14 +144,13 @@
 
 .post-image {
     width: 100%;
-    height: auto;
+    height: 100%;
     object-fit: cover;
     transition: transform 0.45s ease;
 }
 .post-video {
     width: 100%;
-    height: auto;
-    max-height: 560px;
+    height: 100%;
     object-fit: cover;
     background: #000;
     transition: transform 0.45s ease;
@@ -334,6 +351,22 @@
 .post-btn:hover { background: var(--brand-pink-soft); opacity: 1; }
 .post-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+.post-btn.danger {
+    color: #fca5a5;
+}
+
+.post-btn.danger:hover {
+    background: rgba(252, 165, 165, 0.14);
+    opacity: 1;
+}
+
+.post-mobile-actions {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
 .post-error-text {
     color: #fca5a5;
     font-size: 12px;
@@ -531,6 +564,39 @@
     gap: 8px;
 }
 
+.comments-sheet-header {
+    display: none;
+}
+
+.sheet-grip {
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.35);
+    margin: 0 auto 8px;
+}
+
+.sheet-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.sheet-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 18px;
+    line-height: 1;
+}
+
 @media (max-width: 900px) {
     .engagement-modal {
         grid-template-columns: 1fr;
@@ -566,5 +632,98 @@
         padding-right: 12px;
         flex-wrap: wrap;
         row-gap: 4px;
+    }
+
+    .post-options-wrap {
+        display: none;
+    }
+
+    .post-mobile-actions {
+        display: flex;
+    }
+
+    .post-mobile-back {
+        display: inline-flex;
+    }
+
+    :host-context(.post-preview-card) .post-options-wrap {
+        display: block;
+    }
+
+    :host-context(.post-preview-card) .post-mobile-actions {
+        display: none;
+    }
+
+    .post-image-container {
+        height: clamp(240px, 55vh, 520px);
+    }
+
+    .sheet-wrap {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .sheet-panel {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 18px 18px 0 0;
+        max-height: 85vh;
+        overflow: hidden;
+    }
+
+    .likes-modal {
+        padding-top: 6px;
+    }
+
+    .likes-modal .share-list {
+        max-height: 55vh;
+    }
+
+    .engagement-modal {
+        width: 100%;
+        min-height: 70vh;
+        max-height: 88vh;
+        grid-template-columns: 1fr;
+        border-radius: 18px 18px 0 0;
+    }
+
+    .comments-sheet-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: block;
+        padding: 10px 14px 8px;
+        border-bottom: 1px solid var(--glass-border);
+        background: var(--bg-panel);
+        backdrop-filter: blur(16px);
+    }
+
+    .comments-media {
+        display: none;
+    }
+
+    .engagement-side {
+        border-left: none;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .comments-only {
+        border-top: none;
+    }
+
+    .comments-only .engagement-header {
+        display: none;
+    }
+
+    .comments-only .engagement-comments {
+        max-height: 55vh;
+    }
+
+    .comments-only .post-add-comment {
+        position: sticky;
+        bottom: 0;
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        background: var(--bg-panel);
+        border-top: 1px solid var(--glass-border);
     }
 }

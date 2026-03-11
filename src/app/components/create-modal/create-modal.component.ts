@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { firstValueFrom } from 'rxjs';
+import { StoryService } from '../../services/story.service';
 
 type SelectedMediaItem = {
     url: string;
@@ -35,6 +36,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
 
     api = inject(ApiService);
     authService = inject(AuthService);
+    storyService = inject(StoryService);
 
     mediaUrl = '';
     mediaType: 'IMAGE' | 'VIDEO' = 'IMAGE';
@@ -62,6 +64,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
     createSubMode: 'POST' | 'STORY' = 'POST';
     loading = false;
     error = '';
+    isDeletingStory = false;
     private autoAdvanceTimer: any = null;
     private tagSuggestTimer: any = null;
     readonly hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
@@ -625,6 +628,45 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
 
     handleStoryVideoEnded() {
         this.handleViewNext();
+    }
+
+    get canDeleteStory(): boolean {
+        const ownerId = Number(this.activeStory?.userId || this.activeStory?.user?.id);
+        const currentId = Number(this.authService.currentUser?.id);
+        if (ownerId && currentId && ownerId === currentId) {
+            return true;
+        }
+        const ownerUsername = (this.activeStory?.username || this.activeStory?.user?.username || '').toString().toLowerCase();
+        const currentUsername = (this.authService.currentUser?.username || '').toString().toLowerCase();
+        return !!ownerUsername && !!currentUsername && ownerUsername === currentUsername;
+    }
+
+    async handleDeleteStory(event?: Event) {
+        event?.stopPropagation();
+        if (!this.activeStory || this.isDeletingStory) {
+            return;
+        }
+        if (!this.canDeleteStory) {
+            return;
+        }
+        if (!window.confirm('Delete this story?')) {
+            return;
+        }
+        const storyId = Number(this.activeStory?.id);
+        if (!storyId) {
+            return;
+        }
+        this.isDeletingStory = true;
+        try {
+            await firstValueFrom(this.storyService.deleteStory(storyId));
+            this.onStoryCreated.emit();
+            this.onViewStoryAdvance.emit();
+        } catch (err) {
+            console.error('Failed to delete story', err);
+            alert('Failed to delete story.');
+        } finally {
+            this.isDeletingStory = false;
+        }
     }
 
     private async prepareStoryUploadMedia(file: File, mediaType: 'IMAGE' | 'VIDEO'): Promise<string> {

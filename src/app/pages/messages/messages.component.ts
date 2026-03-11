@@ -125,6 +125,11 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.showConversationOnMobile = false;
   }
 
+  goBackToMessageList() {
+    this.activeContact = null;
+    this.showConversationOnMobile = false;
+  }
+
   startPolling(contactId: number) {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
