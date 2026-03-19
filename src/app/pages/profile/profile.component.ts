@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -76,7 +76,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   loadingSavedPostsProfile = false;
   selectedGridPost: any = null;
   showPostPreviewModal = false;
+  showPostPreviewMenu = false;
   showProfileShareModal = false;
+  @ViewChild(PostCardComponent) postPreviewCard?: PostCardComponent;
   private scheduleBadgeTimer: any = null;
   editingProductId: number | null = null;
   productForm: ProductFormState = {
@@ -1057,13 +1059,44 @@ export class ProfileComponent implements OnInit, OnDestroy {
   openPostPreview(post: any) {
     this.selectedGridPost = post;
     this.showPostPreviewModal = true;
+    this.showPostPreviewMenu = false;
     document.body.style.overflow = 'hidden';
   }
 
   closePostPreview() {
     this.showPostPreviewModal = false;
     this.selectedGridPost = null;
+    this.showPostPreviewMenu = false;
     document.body.style.overflow = '';
+  }
+
+  togglePostPreviewMenu(event?: Event) {
+    event?.stopPropagation();
+    if (!this.canManageSelectedPost()) {
+      return;
+    }
+    this.showPostPreviewMenu = !this.showPostPreviewMenu;
+  }
+
+  canManageSelectedPost(): boolean {
+    const post = this.selectedGridPost;
+    if (!post) {
+      return false;
+    }
+    const ownerId = Number(post?.userId || post?.user?.id);
+    const loggedInId = Number(this.authService.currentUser?.id);
+    if (!!ownerId && !!loggedInId && ownerId === loggedInId) {
+      return true;
+    }
+    const ownerUsername = (post?.authorUsername || post?.userName || post?.user?.username || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+    const loggedInUsername = (this.authService.currentUser?.username || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+    return !!ownerUsername && !!loggedInUsername && ownerUsername === loggedInUsername;
   }
 
   openProfileShareModal() {

@@ -1,9 +1,17 @@
 <div class="glass-panel post-card animate-fade-in" *ngIf="post && !isPostRemoved">
     <div class="post-header">
         <div class="post-user-info">
+            <button *ngIf="showMobileBack" class="post-mobile-back" type="button" (click)="mobileBack.emit()">
+                &#x2039;
+            </button>
             <img [src]="post.authorProfilePicture || '/assets/default-avatar.svg'" [alt]="post.authorUsername || 'User'"
                 class="post-avatar profile-link-target" (click)="goToAuthorProfile($event)" />
-            <span class="post-username profile-link-target" (click)="goToAuthorProfile($event)">{{ post.authorUsername }}</span>
+            <span class="post-username profile-link-target" (click)="goToAuthorProfile($event)">
+                {{ post.authorUsername }}
+                <ng-container *ngIf="post.collaboratorUsername && post.collabAccepted">
+                    &nbsp;&amp;&nbsp;&#64;{{ post.collaboratorUsername }}
+                </ng-container>
+            </span>
             <span class="post-time">- {{ post.createdAt | date:'shortDate' }}</span>
         </div>
         <div class="post-options-wrap" *ngIf="canManagePost">
@@ -74,6 +82,12 @@
         <button type="button" class="shop-now-btn" *ngIf="normalizedShopLink" (click)="openShopLink($event)">
             Shop now
         </button>
+        <div class="post-mobile-actions" *ngIf="canManagePost">
+            <button class="post-btn" (click)="startEditPost($event)">Edit post</button>
+            <button class="post-btn danger" (click)="handleDeletePost($event)" [disabled]="isDeletingPost">
+                {{ isDeletingPost ? 'Deleting...' : 'Delete post' }}
+            </button>
+        </div>
 
         <div class="post-comments-view" *ngIf="comments.length > 0 && !showComments" (click)="showComments = true">
             View all {{ comments.length }} comments
@@ -120,14 +134,24 @@
         <h3>Share Post</h3>
         <p>Select your connections and send this post to chat.</p>
 
+        <input
+            type="text"
+            class="share-search-input"
+            placeholder="Search connected users..."
+            [(ngModel)]="shareSearchQuery"
+            (input)="handleShareSearchInput()" />
+
         <div class="share-list">
-            <label *ngFor="let connection of shareConnections" class="share-user-row">
+            <label *ngFor="let connection of filteredShareConnections" class="share-user-row">
                 <input type="checkbox" [checked]="connection.selected"
                     (change)="toggleConnectionSelection(connection, $any($event.target).checked)" />
                 <span class="share-user-name">&#64;{{ connection.username }}</span>
             </label>
             <div class="share-empty" *ngIf="shareConnections.length === 0">
                 No connections found yet.
+            </div>
+            <div class="share-empty" *ngIf="shareConnections.length > 0 && filteredShareConnections.length === 0">
+                No matching users found.
             </div>
         </div>
 
@@ -145,8 +169,14 @@
     </div>
 </div>
 
-<div class="share-modal-wrap" *ngIf="showLikesModal" (click)="closeLikesModal()">
-    <div class="share-modal glass-panel likes-modal" (click)="$event.stopPropagation()">
+<div class="share-modal-wrap sheet-wrap" *ngIf="showLikesModal" (click)="closeLikesModal()">
+    <div class="share-modal glass-panel likes-modal sheet-panel"
+        [style.transform]="getSheetTransform('likes')"
+        [style.transition]="getSheetTransition('likes')"
+        (click)="$event.stopPropagation()"
+        (touchstart)="onSheetTouchStart('likes', $event)"
+        (touchmove)="onSheetTouchMove('likes', $event)"
+        (touchend)="onSheetTouchEnd('likes', $event)">
         <h3>Likes</h3>
         <div class="share-list likes-list">
             <div *ngIf="loadingLikes" class="share-empty">Loading likes...</div>
@@ -163,13 +193,24 @@
     </div>
 </div>
 
-<div class="share-modal-wrap" *ngIf="showCommentsModal" (click)="closeCommentsModal()">
-    <div class="engagement-modal glass-panel" (click)="$event.stopPropagation()">
-        <div class="engagement-media">
+<div class="share-modal-wrap sheet-wrap" *ngIf="showCommentsModal" (click)="closeCommentsModal()">
+    <div class="engagement-modal glass-panel sheet-panel"
+        [style.transform]="getSheetTransform('comments')"
+        [style.transition]="getSheetTransition('comments')"
+        (click)="$event.stopPropagation()"
+        (touchstart)="onSheetTouchStart('comments', $event)"
+        (touchmove)="onSheetTouchMove('comments', $event)"
+        (touchend)="onSheetTouchEnd('comments', $event)">
+        <div class="comments-sheet-header">
+            <div class="sheet-grip"></div>
+            <div class="sheet-title">Comments</div>
+            <button class="sheet-close-btn" type="button" (click)="closeCommentsModal()">×</button>
+        </div>
+        <div class="engagement-media comments-media">
             <img *ngIf="!isVideoPost" [src]="activeMedia?.url" [alt]="post?.authorUsername || 'Post'" class="engagement-media-content" />
             <video *ngIf="isVideoPost" [src]="activeMedia?.url" class="engagement-media-content" controls playsinline></video>
         </div>
-        <div class="engagement-side">
+        <div class="engagement-side comments-only">
             <div class="engagement-header">
                 <strong>{{ post?.authorUsername }}</strong>
                 <button class="post-btn" (click)="closeCommentsModal()">Close</button>

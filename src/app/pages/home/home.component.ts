@@ -1,10 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { PostCardComponent } from '../../components/post-card/post-card.component';
 import { CreateModalComponent } from '../../components/create-modal/create-modal.component';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
+import { FeedRefreshService } from '../../services/feed-refresh.service';
 // import { StoryRingComponent } from '../../components/story-ring/story-ring.component';
 // import { StoryModalComponent } from '../../components/story-modal/story-modal.component';
 
@@ -15,7 +16,8 @@ import { firstValueFrom } from 'rxjs';
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
+  private static readonly STORY_TTL_MS = 24 * 60 * 60 * 1000;
   posts: any[] = [];
   stories: any[] = [];
   storyUsers: any[] = [];
@@ -24,6 +26,7 @@ export class HomeComponent implements OnInit {
 
   authService = inject(AuthService);
   api = inject(ApiService);
+  feedRefreshService = inject(FeedRefreshService);
 
   isStoryModalOpen = false;
   storyModalMode: 'create' | 'view' = 'create';
@@ -31,7 +34,10 @@ export class HomeComponent implements OnInit {
   storyCreateDefaultSubMode: 'POST' | 'STORY' = 'STORY';
   storyQueue: any[] = [];
   storyQueueIndex = -1;
+  storyUserQueue: any[] = [];
+  storyUserIndex = -1;
   private seenStoryIds = new Set<number>();
+  private feedRefreshSub?: Subscription;
 
   get user() {
     return this.authService.currentUser;
@@ -40,6 +46,17 @@ export class HomeComponent implements OnInit {
   async ngOnInit() {
     this.loadSeenStories();
     await this.fetchFeedData();
+    this.feedRefreshSub = this.feedRefreshService.refresh$.subscribe(type => {
+      if (type === 'post') {
+        this.fetchPostsOnly();
+      } else if (type === 'story') {
+        this.fetchStoriesOnly();
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.feedRefreshSub?.unsubscribe();
   }
 
   async fetchFeedData() {
@@ -53,7 +70,7 @@ export class HomeComponent implements OnInit {
 
       const [storiesRes, feedRes] = await Promise.all([storiesProm, feedProm]);
 
-      this.stories = storiesRes || [];
+      this.stories = this.filterActiveStories(storiesRes || []);
       this.buildStoryUsers();
 
       this.posts = (feedRes || []).map(dto => ({
@@ -76,10 +93,27 @@ export class HomeComponent implements OnInit {
   async fetchStoriesOnly() {
     try {
       const storiesRes = await firstValueFrom(this.api.get<any[]>('/stories/feed'));
-      this.stories = storiesRes || [];
+      this.stories = this.filterActiveStories(storiesRes || []);
       this.buildStoryUsers();
     } catch (err) {
       console.error("Failed to refresh stories", err);
+    }
+  }
+
+  async fetchPostsOnly() {
+    try {
+      const feedRes = await firstValueFrom(this.api.get<any[]>('/feed/home'));
+      this.posts = (feedRes || []).map(dto => ({
+        ...dto,
+        authorUsername: dto.userName,
+        content: dto.description,
+        createdAt: dto.createdAt || new Date(),
+        mediaType: dto.mediaType || '',
+        likeCount: dto.likeCount || 0,
+        commentCount: dto.commentCount || 0
+      }));
+    } catch (err) {
+      console.error("Failed to refresh posts", err);
     }
   }
 
@@ -89,24 +123,23 @@ export class HomeComponent implements OnInit {
     this.activeStoryView = null;
     this.storyQueue = [];
     this.storyQueueIndex = -1;
+    this.storyUserQueue = [];
+    this.storyUserIndex = -1;
     this.isStoryModalOpen = true;
   }
 
   handleOpenStoryView(userStoryBucket: any) {
-    const userStories = Array.isArray(userStoryBucket?.stories) ? userStoryBucket.stories : [];
-    if (userStories.length === 0) {
+    this.storyUserQueue = Array.isArray(this.storyUsers) ? [...this.storyUsers] : [];
+    const targetKey = `${userStoryBucket?.userId || userStoryBucket?.username || userStoryBucket?.id}`;
+    const selectedIndex = this.storyUserQueue.findIndex(bucket =>
+      `${bucket?.userId || bucket?.username || bucket?.id}` === targetKey
+    );
+    this.storyUserIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    if (!this.openStoryBucketAt(this.storyUserIndex, true)) {
       return;
     }
 
-    this.storyQueue = [...userStories].sort(
-      (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-    );
-    const firstUnseenIndex = this.storyQueue.findIndex(story => !this.seenStoryIds.has(Number(story.id)));
-    this.storyQueueIndex = firstUnseenIndex >= 0 ? firstUnseenIndex : 0;
-
     this.storyModalMode = 'view';
-    this.activeStoryView = this.storyQueue[this.storyQueueIndex];
-    this.markStorySeen(this.activeStoryView);
     this.isStoryModalOpen = true;
     this.buildStoryUsers();
   }
@@ -116,6 +149,8 @@ export class HomeComponent implements OnInit {
     this.activeStoryView = null;
     this.storyQueue = [];
     this.storyQueueIndex = -1;
+    this.storyUserQueue = [];
+    this.storyUserIndex = -1;
   }
 
   handleStoryAdvance() {
@@ -125,7 +160,9 @@ export class HomeComponent implements OnInit {
 
     const nextIndex = this.storyQueueIndex + 1;
     if (nextIndex >= this.storyQueue.length) {
-      this.handleStoryModalClose();
+      if (!this.advanceToNextUserStory()) {
+        this.handleStoryModalClose();
+      }
       return;
     }
 
@@ -142,11 +179,70 @@ export class HomeComponent implements OnInit {
 
     const prevIndex = this.storyQueueIndex - 1;
     if (prevIndex < 0) {
+      this.advanceToPreviousUserStory();
       return;
     }
 
     this.storyQueueIndex = prevIndex;
     this.activeStoryView = this.storyQueue[this.storyQueueIndex];
+  }
+
+  private openStoryBucketAt(index: number, preferFirstUnseen: boolean): boolean {
+    const bucket = this.storyUserQueue[index];
+    const userStories = Array.isArray(bucket?.stories) ? bucket.stories : [];
+    if (userStories.length === 0) {
+      return false;
+    }
+
+    this.storyQueue = [...userStories].sort(
+      (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+    );
+
+    let startIndex = 0;
+    if (preferFirstUnseen) {
+      const firstUnseenIndex = this.storyQueue.findIndex(story => !this.seenStoryIds.has(Number(story.id)));
+      startIndex = firstUnseenIndex >= 0 ? firstUnseenIndex : 0;
+    }
+
+    this.storyQueueIndex = startIndex;
+    this.activeStoryView = this.storyQueue[this.storyQueueIndex];
+    this.markStorySeen(this.activeStoryView);
+    return true;
+  }
+
+  private advanceToNextUserStory(): boolean {
+    if (!this.storyUserQueue.length) {
+      return false;
+    }
+    for (let i = this.storyUserIndex + 1; i < this.storyUserQueue.length; i++) {
+      const bucket = this.storyUserQueue[i];
+      const userStories = Array.isArray(bucket?.stories) ? bucket.stories : [];
+      const hasUnseen = userStories.some(story => !this.seenStoryIds.has(Number(story.id)));
+      if (!hasUnseen) {
+        continue;
+      }
+      if (this.openStoryBucketAt(i, true)) {
+        this.storyUserIndex = i;
+        this.buildStoryUsers();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private advanceToPreviousUserStory(): boolean {
+    if (!this.storyUserQueue.length) {
+      return false;
+    }
+    for (let i = this.storyUserIndex - 1; i >= 0; i--) {
+      if (this.openStoryBucketAt(i, false)) {
+        this.storyUserIndex = i;
+        this.storyQueueIndex = Math.max(0, this.storyQueue.length - 1);
+        this.activeStoryView = this.storyQueue[this.storyQueueIndex];
+        return true;
+      }
+    }
+    return false;
   }
 
   private buildStoryUsers() {
@@ -178,18 +274,51 @@ export class HomeComponent implements OnInit {
         };
       })
       .sort(
-        (a, b) =>
-          new Date(b.latestStory?.createdAt || 0).getTime() - new Date(a.latestStory?.createdAt || 0).getTime()
+        (a, b) => {
+          if (a.isSeen !== b.isSeen) {
+            return a.isSeen ? 1 : -1;
+          }
+          return new Date(b.latestStory?.createdAt || 0).getTime()
+            - new Date(a.latestStory?.createdAt || 0).getTime();
+        }
       );
+  }
+
+  private filterActiveStories(stories: any[]): any[] {
+    const now = Date.now();
+    return (stories || []).filter(story => {
+      const createdAtRaw = story?.createdAt || story?.created_at || story?.timestamp;
+      const createdAt = new Date(createdAtRaw || 0).getTime();
+      if (!Number.isFinite(createdAt) || createdAt <= 0) {
+        return true;
+      }
+      return now - createdAt < HomeComponent.STORY_TTL_MS;
+    });
   }
 
   private loadSeenStories() {
     try {
-      const raw = localStorage.getItem('revconnect_seen_story_ids');
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        parsed.forEach(id => {
+      this.seenStoryIds.clear();
+      const key = this.getSeenStorageKey();
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(id => {
+            const num = Number(id);
+            if (Number.isFinite(num) && num > 0) {
+              this.seenStoryIds.add(num);
+            }
+          });
+        }
+        return;
+      }
+
+      const legacyRaw = localStorage.getItem('revconnect_seen_story_ids');
+      if (!legacyRaw) return;
+      const legacyParsed = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyParsed)) {
+        legacyParsed.forEach(id => {
           const num = Number(id);
           if (Number.isFinite(num) && num > 0) {
             this.seenStoryIds.add(num);
@@ -203,7 +332,14 @@ export class HomeComponent implements OnInit {
 
   private saveSeenStories() {
     const latest = Array.from(this.seenStoryIds).slice(-500);
-    localStorage.setItem('revconnect_seen_story_ids', JSON.stringify(latest));
+    localStorage.setItem(this.getSeenStorageKey(), JSON.stringify(latest));
+  }
+
+  private getSeenStorageKey(): string {
+    const userId = Number(this.user?.id);
+    return Number.isFinite(userId) && userId > 0
+      ? `revconnect_seen_story_ids_${userId}`
+      : 'revconnect_seen_story_ids';
   }
 
   private markStorySeen(story: any) {

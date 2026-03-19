@@ -80,8 +80,8 @@
             <ng-container *ngIf="activeContact">
                 <div class="active-message-header">
                     <div class="chat-header-info">
-                        <button *ngIf="isMobileView" type="button" class="mobile-back-btn" (click)="goBackToContacts()"
-                            aria-label="Back to conversations">
+                        <button type="button" class="chat-back-btn" (click)="goBackToMessageList()"
+                            aria-label="Back to messages">
                             Back
                         </button>
                         <div class="thread-avatar small">

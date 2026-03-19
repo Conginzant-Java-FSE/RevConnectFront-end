@@ -16,7 +16,8 @@ export type NotificationType =
   | 'COLLAB_PROMOTION_ACCEPTED'
   | 'COLLAB_PROMOTION_CONFIRMED'
   | 'COLLAB_PROMOTION_POST_CREATED'
-  | 'COLLAB_PAYMENT_DONE';
+  | 'COLLAB_PAYMENT_DONE'
+  | 'COLLAB_POST_REQUEST';
 
 export interface Notification {
   id: number;

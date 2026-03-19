@@ -4,12 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { firstValueFrom } from 'rxjs';
+import { StoryService } from '../../services/story.service';
+import { FeedRefreshService } from '../../services/feed-refresh.service';
 
 type SelectedMediaItem = {
     url: string;
     type: 'IMAGE' | 'VIDEO';
     sourceFile?: File;
     objectUrl?: boolean;
+    normalized?: boolean;
 };
 
 @Component({
@@ -21,6 +24,11 @@ type SelectedMediaItem = {
 })
 export class CreateModalComponent implements OnChanges, OnDestroy {
     private static readonly MAX_MEDIA_SIZE_MB = 1024;
+    private static readonly POST_ASPECT = 4 / 5;
+    private static readonly STORY_ASPECT = 9 / 16;
+    private static readonly POST_MAX_DIMENSION = 1440;
+    private static readonly STORY_MAX_DIMENSION = 1080;
+    private static readonly STORY_MAX_BYTES = 750 * 1024;
     @Input() isOpen = false;
     @Input() mode: 'create' | 'view' = 'create';
     @Input() activeStory: any = null;
@@ -35,6 +43,8 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
 
     api = inject(ApiService);
     authService = inject(AuthService);
+    storyService = inject(StoryService);
+    feedRefreshService = inject(FeedRefreshService);
 
     mediaUrl = '';
     mediaType: 'IMAGE' | 'VIDEO' = 'IMAGE';
@@ -52,6 +62,8 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
     scheduleDate = '';
     scheduleHour = '2';
     scheduleMinute = '45';
+    readonly hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
+    readonly minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
     scheduleMeridiem: 'AM' | 'PM' = 'AM';
     scheduleEnabled = false;
     subscriberOnlyStory = false;
@@ -62,10 +74,12 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
     createSubMode: 'POST' | 'STORY' = 'POST';
     loading = false;
     error = '';
+    isDeletingStory = false;
+    showStoryViewers = false;
+    storyViewers: Array<{ id: number; username: string; avatarUrl?: string; viewedAt?: string }> = [];
+    loadingStoryViewers = false;
     private autoAdvanceTimer: any = null;
     private tagSuggestTimer: any = null;
-    readonly hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
-    readonly minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
     ngOnChanges(changes: SimpleChanges) {
         if (changes['isOpen'] || changes['mode'] || changes['activeStory'] || changes['defaultCreateSubMode']) {
@@ -168,7 +182,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
         this.onViewStoryBack.emit();
     }
 
-    handleFileChange(event: Event) {
+    async handleFileChange(event: Event) {
         const input = event.target as HTMLInputElement;
         if (!input.files || input.files.length === 0) return;
 
@@ -186,13 +200,24 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
             }
 
             this.revokeObjectUrls();
-            const previewUrl = URL.createObjectURL(firstFile);
             const storyType: 'IMAGE' | 'VIDEO' = firstFile.type.startsWith('video/') ? 'VIDEO' : 'IMAGE';
+            let preparedFile = firstFile;
+            let normalized = false;
+            if (storyType === 'IMAGE') {
+                try {
+                    preparedFile = await this.prepareImageForStory(firstFile);
+                    normalized = true;
+                } catch {
+                    preparedFile = firstFile;
+                }
+            }
+            const previewUrl = URL.createObjectURL(preparedFile);
             const storyItem: SelectedMediaItem = {
                 url: previewUrl,
                 type: storyType,
-                sourceFile: firstFile,
-                objectUrl: true
+                sourceFile: preparedFile,
+                objectUrl: true,
+                normalized
             };
             this.selectedMedia = [storyItem];
             this.activeMediaIndex = 0;
@@ -212,12 +237,27 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
             return;
         }
 
-        const selected = files.map(file => ({
-            url: URL.createObjectURL(file),
-            type: file.type.startsWith('video/') ? 'VIDEO' as const : 'IMAGE' as const,
-            sourceFile: file,
-            objectUrl: true
-        }));
+        const selected: SelectedMediaItem[] = [];
+        for (const file of files) {
+            const type: 'IMAGE' | 'VIDEO' = file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE';
+            let preparedFile = file;
+            let normalized = false;
+            if (type === 'IMAGE') {
+                try {
+                    preparedFile = await this.prepareImageForPost(file);
+                    normalized = true;
+                } catch {
+                    preparedFile = file;
+                }
+            }
+            selected.push({
+                url: URL.createObjectURL(preparedFile),
+                type,
+                sourceFile: preparedFile,
+                objectUrl: true,
+                normalized
+            });
+        }
 
         this.selectedMedia = [...this.selectedMedia, ...selected];
         if (this.selectedMedia.length > 0) {
@@ -259,13 +299,16 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
                 const active = this.selectedMedia[0];
                 let storyMediaUrl = this.mediaUrl;
                 if (active?.sourceFile) {
-                    storyMediaUrl = await this.prepareStoryUploadMedia(active.sourceFile, active.type);
+                    storyMediaUrl = active.normalized
+                        ? await this.readFile(active.sourceFile)
+                        : await this.prepareStoryUploadMedia(active.sourceFile, active.type);
                 }
                 await firstValueFrom(this.api.post('/stories', {
                     mediaUrl: storyMediaUrl,
                     mediaType: active?.type || this.mediaType || 'IMAGE',
                     subscriberOnly: this.isCreatorUser ? this.subscriberOnlyStory : false
                 }));
+                this.feedRefreshService.notify('story');
             } else {
                 const mediaBatch = this.selectedMedia.length > 0
                     ? this.selectedMedia
@@ -299,6 +342,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
                         ? Number(this.seriesOrder)
                         : null
                 }));
+                this.feedRefreshService.notify('post');
             }
 
             this.onStoryCreated.emit();
@@ -627,23 +671,95 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
         this.handleViewNext();
     }
 
+    onCollaboratorToggle() {
+        if (!this.addCollaborator) {
+            this.collaboratorUsername = '';
+        }
+    }
+
+    get canDeleteStory(): boolean {
+        const ownerId = Number(this.activeStory?.userId || this.activeStory?.user?.id);
+        const currentId = Number(this.authService.currentUser?.id);
+        if (ownerId && currentId && ownerId === currentId) {
+            return true;
+        }
+        const ownerUsername = (this.activeStory?.username || this.activeStory?.user?.username || '').toString().toLowerCase();
+        const currentUsername = (this.authService.currentUser?.username || '').toString().toLowerCase();
+        return !!ownerUsername && !!currentUsername && ownerUsername === currentUsername;
+    }
+
+    get canViewStoryViewers(): boolean {
+        return this.canDeleteStory;
+    }
+
+    async handleDeleteStory(event?: Event) {
+        event?.stopPropagation();
+        if (!this.activeStory || this.isDeletingStory) {
+            return;
+        }
+        if (!this.canDeleteStory) {
+            return;
+        }
+        if (!window.confirm('Delete this story?')) {
+            return;
+        }
+        const storyId = Number(this.activeStory?.id);
+        if (!storyId) {
+            return;
+        }
+        this.isDeletingStory = true;
+        try {
+            await firstValueFrom(this.storyService.deleteStory(storyId));
+            this.onStoryCreated.emit();
+            this.onViewStoryAdvance.emit();
+            alert('Story deleted successfully.');
+        } catch (err) {
+            console.error('Failed to delete story', err);
+            alert('Failed to delete story.');
+        } finally {
+            this.isDeletingStory = false;
+        }
+    }
+
+    async openStoryViewers(event?: Event) {
+        event?.stopPropagation();
+        if (!this.activeStory?.id || !this.canViewStoryViewers) {
+            return;
+        }
+
+        this.showStoryViewers = true;
+        this.loadingStoryViewers = true;
+        this.storyViewers = [];
+        try {
+            const viewers = await firstValueFrom(this.api.get<any[]>(`/stories/${this.activeStory.id}/viewers`));
+            this.storyViewers = (viewers || []).map(viewer => ({
+                id: Number(viewer?.id) || 0,
+                username: (viewer?.username || '').toString(),
+                avatarUrl: viewer?.avatarUrl || '',
+                viewedAt: viewer?.viewedAt
+            }));
+        } catch (err) {
+            console.error('Failed to load story viewers', err);
+            this.storyViewers = [];
+        } finally {
+            this.loadingStoryViewers = false;
+        }
+    }
+
+    closeStoryViewers() {
+        this.showStoryViewers = false;
+        this.storyViewers = [];
+        this.loadingStoryViewers = false;
+    }
+
     private async prepareStoryUploadMedia(file: File, mediaType: 'IMAGE' | 'VIDEO'): Promise<string> {
         if (mediaType === 'VIDEO') {
             return this.readFile(file);
         }
 
-        const maxSizeBytes = 750 * 1024;
-        const maxDimension = 1080;
-        const quality = 0.8;
-
         try {
-            const optimized = await this.compressImageFile(file, maxDimension, quality);
-            if (optimized.size <= maxSizeBytes) {
-                return this.readFile(optimized);
-            }
-            // If still large, compress one more pass.
-            const secondPass = await this.compressImageFile(optimized, 900, 0.72);
-            return this.readFile(secondPass);
+            const optimized = await this.prepareImageForStory(file);
+            return this.readFile(optimized);
         } catch {
             // Fallback: keep upload resilient even if optimization fails.
             return this.readFile(file);
@@ -653,12 +769,54 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
     private async preparePostUploadMedia(item: SelectedMediaItem | { url: string; type: 'IMAGE' | 'VIDEO' }): Promise<string> {
         const sourceFile = (item as SelectedMediaItem).sourceFile;
         if (sourceFile) {
+            const normalized = (item as SelectedMediaItem).normalized;
+            if (normalized) {
+                return this.readFile(sourceFile);
+            }
+            if ((item as SelectedMediaItem).type === 'IMAGE') {
+                try {
+                    const optimized = await this.prepareImageForPost(sourceFile);
+                    return this.readFile(optimized);
+                } catch {
+                    return this.readFile(sourceFile);
+                }
+            }
             return this.readFile(sourceFile);
         }
         return item.url;
     }
 
-    private async compressImageFile(file: File, maxDimension: number, quality: number): Promise<File> {
+    private async prepareImageForPost(file: File): Promise<File> {
+        return this.cropAndCompressImage(
+            file,
+            CreateModalComponent.POST_ASPECT,
+            CreateModalComponent.POST_MAX_DIMENSION,
+            0.88,
+            'post'
+        );
+    }
+
+    private async prepareImageForStory(file: File): Promise<File> {
+        const firstPass = await this.cropAndCompressImage(
+            file,
+            CreateModalComponent.STORY_ASPECT,
+            CreateModalComponent.STORY_MAX_DIMENSION,
+            0.82,
+            'story'
+        );
+        if (firstPass.size <= CreateModalComponent.STORY_MAX_BYTES) {
+            return firstPass;
+        }
+        return this.cropAndCompressImage(
+            firstPass,
+            CreateModalComponent.STORY_ASPECT,
+            900,
+            0.72,
+            'story'
+        );
+    }
+
+    private async cropAndCompressImage(file: File, targetAspect: number, maxDimension: number, quality: number, namePrefix: string): Promise<File> {
         const objectUrl = URL.createObjectURL(file);
         try {
             const image = await this.loadImage(objectUrl);
@@ -668,9 +826,24 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
                 throw new Error('Invalid image dimensions');
             }
 
-            const scale = Math.min(1, maxDimension / Math.max(originalWidth, originalHeight));
-            const targetWidth = Math.max(1, Math.round(originalWidth * scale));
-            const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+            let cropWidth = originalWidth;
+            let cropHeight = originalHeight;
+            let cropX = 0;
+            let cropY = 0;
+            if (Number.isFinite(targetAspect) && targetAspect > 0) {
+                const currentAspect = originalWidth / originalHeight;
+                if (currentAspect > targetAspect) {
+                    cropWidth = Math.round(originalHeight * targetAspect);
+                    cropX = Math.round((originalWidth - cropWidth) / 2);
+                } else if (currentAspect < targetAspect) {
+                    cropHeight = Math.round(originalWidth / targetAspect);
+                    cropY = Math.round((originalHeight - cropHeight) / 2);
+                }
+            }
+
+            const scale = Math.min(1, maxDimension / Math.max(cropWidth, cropHeight));
+            const targetWidth = Math.max(1, Math.round(cropWidth * scale));
+            const targetHeight = Math.max(1, Math.round(cropHeight * scale));
             const canvas = document.createElement('canvas');
             canvas.width = targetWidth;
             canvas.height = targetHeight;
@@ -678,7 +851,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
             if (!ctx) {
                 throw new Error('Canvas context unavailable');
             }
-            ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
+            ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
 
             const blob = await new Promise<Blob>((resolve, reject) => {
                 canvas.toBlob(
@@ -688,7 +861,7 @@ export class CreateModalComponent implements OnChanges, OnDestroy {
                 );
             });
 
-            return new File([blob], `story-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            return new File([blob], `${namePrefix}-${Date.now()}.jpg`, { type: 'image/jpeg' });
         } finally {
             URL.revokeObjectURL(objectUrl);
         }

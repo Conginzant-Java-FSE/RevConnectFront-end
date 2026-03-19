@@ -72,11 +72,11 @@ export class PostService {
 
   // ── Saved Posts ──
   savePost(postId: number): Observable<string> {
-    return this.api.post<string>(`/saved/${postId}`);
+    return this.api.post<string>(`/saved/${postId}`, {}, { responseType: 'text' as 'json' });
   }
 
   unsavePost(postId: number): Observable<string> {
-    return this.api.delete<string>(`/saved/${postId}`);
+    return this.api.delete<string>(`/saved/${postId}`, { responseType: 'text' as 'json' });
   }
 
   getSavedPosts(): Observable<any[]> {

@@ -20,6 +20,6 @@ export class StoryService {
   }
 
   deleteStory(id: number): Observable<string> {
-    return this.api.delete<string>(`/stories/${id}`);
+    return this.api.delete<string>(`/stories/${id}`, { responseType: 'text' as 'json' });
   }
 }

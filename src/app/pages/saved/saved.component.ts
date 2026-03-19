@@ -45,6 +45,8 @@ export class SavedComponent implements OnInit {
     try {
       await firstValueFrom(this.postService.unsavePost(postId));
       this.savedPosts = this.savedPosts.filter(item => Number(item?.post?.id) !== Number(postId));
+      this.error = '';
+      alert('Post removed from saved posts.');
     } catch (err) {
       console.error('Failed to unsave post', err);
       this.error = 'Unable to remove saved post.';
