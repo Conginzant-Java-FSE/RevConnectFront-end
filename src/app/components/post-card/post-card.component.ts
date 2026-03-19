@@ -56,6 +56,7 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   shareMessage = '';
   isSharing = false;
   shareFeedback = '';
+  shareSearchQuery = '';
   private videoObserver?: IntersectionObserver;
   private trackedImpression = false;
   private playbackStartedAt: number | null = null;
@@ -67,6 +68,10 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   }
 
   get canManagePost(): boolean {
+    return this.isPostOwner || this.isPostCollaborator;
+  }
+
+  private get isPostOwner(): boolean {
     const ownerId = Number(this.post?.userId || this.post?.user?.id);
     const loggedInId = Number(this.currentUser?.id);
     if (!!ownerId && !!loggedInId && ownerId === loggedInId) {
@@ -83,6 +88,27 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
       .toLowerCase();
 
     return !!ownerUsername && !!loggedInUsername && ownerUsername === loggedInUsername;
+  }
+
+  private get isPostCollaborator(): boolean {
+    if (this.post?.collabAccepted === false) {
+      return false;
+    }
+    const collaboratorId = Number(this.post?.collaboratorId || this.post?.collaborator?.id);
+    const loggedInId = Number(this.currentUser?.id);
+    if (!!collaboratorId && !!loggedInId && collaboratorId === loggedInId) {
+      return true;
+    }
+
+    const collaboratorUsername = (this.post?.collaboratorUsername || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+    const loggedInUsername = (this.currentUser?.username || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+    return !!collaboratorUsername && !!loggedInUsername && collaboratorUsername === loggedInUsername;
   }
 
   ngOnInit() {
@@ -434,11 +460,24 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
     this.postActionError = '';
 
     try {
-      await firstValueFrom(this.api.delete(`/revconnect/users/posts/${postId}`));
-      this.isPostRemoved = true;
+      if (this.isPostOwner) {
+        await firstValueFrom(this.api.delete(`/revconnect/users/posts/${postId}`, { responseType: 'text' as 'json' }));
+        this.isPostRemoved = true;
+        alert('Post deleted successfully.');
+      } else if (this.isPostCollaborator) {
+        await firstValueFrom(this.api.put(`/revconnect/users/posts/${postId}/collab/remove`, {}, { responseType: 'text' as 'json' }));
+        this.isPostRemoved = true;
+        alert('Post removed from your profile.');
+      }
     } catch (err) {
-      console.error('Failed to delete post', err);
-      this.postActionError = 'Failed to delete post.';
+      const status = (err as any)?.status;
+      if (status === 200 || status === 204) {
+        this.isPostRemoved = true;
+        alert(this.isPostOwner ? 'Post deleted successfully.' : 'Post removed from your profile.');
+      } else {
+        console.error('Failed to delete post', err);
+        this.postActionError = 'Failed to delete post.';
+      }
     } finally {
       this.isDeletingPost = false;
     }
@@ -538,6 +577,7 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
     this.showShareModal = true;
     this.shareFeedback = '';
     this.shareMessage = '';
+    this.shareSearchQuery = '';
     await this.loadShareConnections();
   }
 
@@ -546,10 +586,25 @@ export class PostCardComponent implements OnInit, OnChanges, AfterViewInit, OnDe
     this.shareFeedback = '';
     this.shareConnections = [];
     this.shareMessage = '';
+    this.shareSearchQuery = '';
   }
 
   get selectedShareCount(): number {
     return this.shareConnections.filter(connection => connection.selected).length;
+  }
+
+  get filteredShareConnections(): Array<{ id: number; username: string; selected: boolean }> {
+    const query = this.shareSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return this.shareConnections;
+    }
+    return this.shareConnections.filter(connection =>
+      connection.username.toLowerCase().includes(query)
+    );
+  }
+
+  handleShareSearchInput() {
+    this.shareFeedback = '';
   }
 
   async loadShareConnections() {

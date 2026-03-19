@@ -282,10 +282,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
         return false;
       }
       const isFollowing = this.followingIds.has(id);
-      const isInbound = this.lastSenderByPartner.get(id) === id;
-      const isRequest = !isFollowing && isInbound && !this.approvedRequestIds.has(id);
-      const isGeneral = !isFollowing && !isInbound;
-      return !isRequest && !isGeneral;
+      const isApproved = this.approvedRequestIds.has(id);
+      return isFollowing || isApproved;
     });
   }
 
@@ -296,8 +294,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
         return false;
       }
       const isFollowing = this.followingIds.has(id);
-      const isInbound = this.lastSenderByPartner.get(id) === id;
-      return !isFollowing && isInbound && !this.approvedRequestIds.has(id);
+      const isApproved = this.approvedRequestIds.has(id);
+      return !isFollowing && !isApproved;
     });
   }
 

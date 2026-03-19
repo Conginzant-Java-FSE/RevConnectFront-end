@@ -56,12 +56,12 @@
     height: 68px;
     border-radius: 50%;
     padding: 3px;
-    background: var(--brand-gradient);
+    background: linear-gradient(135deg, #ff8a00 0%, #ff4d00 45%, #ffb347 100%);
     transition: transform 0.2s ease;
 }
 
 .story-ring.seen {
-    background: var(--glass-border);
+    background: rgba(255, 255, 255, 0.18);
 }
 
 .story-ring:hover {

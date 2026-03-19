@@ -6,7 +6,12 @@
             </button>
             <img [src]="post.authorProfilePicture || '/assets/default-avatar.svg'" [alt]="post.authorUsername || 'User'"
                 class="post-avatar profile-link-target" (click)="goToAuthorProfile($event)" />
-            <span class="post-username profile-link-target" (click)="goToAuthorProfile($event)">{{ post.authorUsername }}</span>
+            <span class="post-username profile-link-target" (click)="goToAuthorProfile($event)">
+                {{ post.authorUsername }}
+                <ng-container *ngIf="post.collaboratorUsername && post.collabAccepted">
+                    &nbsp;&amp;&nbsp;&#64;{{ post.collaboratorUsername }}
+                </ng-container>
+            </span>
             <span class="post-time">- {{ post.createdAt | date:'shortDate' }}</span>
         </div>
         <div class="post-options-wrap" *ngIf="canManagePost">
@@ -129,14 +134,24 @@
         <h3>Share Post</h3>
         <p>Select your connections and send this post to chat.</p>
 
+        <input
+            type="text"
+            class="share-search-input"
+            placeholder="Search connected users..."
+            [(ngModel)]="shareSearchQuery"
+            (input)="handleShareSearchInput()" />
+
         <div class="share-list">
-            <label *ngFor="let connection of shareConnections" class="share-user-row">
+            <label *ngFor="let connection of filteredShareConnections" class="share-user-row">
                 <input type="checkbox" [checked]="connection.selected"
                     (change)="toggleConnectionSelection(connection, $any($event.target).checked)" />
                 <span class="share-user-name">&#64;{{ connection.username }}</span>
             </label>
             <div class="share-empty" *ngIf="shareConnections.length === 0">
                 No connections found yet.
+            </div>
+            <div class="share-empty" *ngIf="shareConnections.length > 0 && filteredShareConnections.length === 0">
+                No matching users found.
             </div>
         </div>
 

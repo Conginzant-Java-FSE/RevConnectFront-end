@@ -13,6 +13,9 @@
                     </span>
                 </div>
                 <div class="story-viewer-actions">
+                    <button *ngIf="canViewStoryViewers" class="story-seen-btn" (click)="openStoryViewers($event)">
+                        Seen
+                    </button>
                     <button *ngIf="canDeleteStory" class="story-delete-btn" (click)="handleDeleteStory($event)"
                         [disabled]="isDeletingStory">
                         {{ isDeletingStory ? 'Deleting...' : 'Delete' }}
@@ -108,10 +111,41 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="form-group" *ngIf="isCreatorUser">
+                                <label class="check-row">
+                                    <input type="checkbox" [(ngModel)]="addCollaborator" name="addCollaborator"
+                                        (change)="onCollaboratorToggle()" />
+                                    <span>Add collaborator</span>
+                                </label>
+                                <input *ngIf="addCollaborator" type="text" [(ngModel)]="collaboratorUsername"
+                                    name="collaboratorUsername" placeholder="Creator username" />
+                                <small *ngIf="addCollaborator" class="helper-text">
+                                    The collaborator must accept before this post appears on their profile.
+                                </small>
+                            </div>
                             <div class="form-group">
                                 <label>Shop Link</label>
                                 <input type="text" [(ngModel)]="productLink" name="productLink"
                                     placeholder="https://yourstore.com/product" />
+                            </div>
+                            <div class="form-group" *ngIf="isCreatorUser">
+                                <label class="check-row">
+                                    <input type="checkbox" [(ngModel)]="scheduleEnabled" name="scheduleEnabled" />
+                                    <span>Schedule post</span>
+                                </label>
+                                <div class="schedule-row" *ngIf="scheduleEnabled">
+                                    <input type="date" [(ngModel)]="scheduleDate" name="scheduleDate" />
+                                    <select [(ngModel)]="scheduleHour" name="scheduleHour">
+                                        <option *ngFor="let hour of hourOptions" [value]="hour">{{ hour }}</option>
+                                    </select>
+                                    <select [(ngModel)]="scheduleMinute" name="scheduleMinute">
+                                        <option *ngFor="let minute of minuteOptions" [value]="minute">{{ minute }}</option>
+                                    </select>
+                                    <select [(ngModel)]="scheduleMeridiem" name="scheduleMeridiem">
+                                        <option value="AM">AM</option>
+                                        <option value="PM">PM</option>
+                                    </select>
+                                </div>
                             </div>
                             <button type="submit" class="story-submit-btn" [disabled]="loading || !hasSelectedMedia">
                                 {{ loading ? 'Posting...' : 'Share Post' }}
@@ -162,6 +196,31 @@
                     </button>
                 </ng-container>
             </form>
+        </div>
+
+        <div class="story-viewers-wrap" *ngIf="showStoryViewers" (click)="closeStoryViewers()">
+            <div class="story-viewers-panel glass-panel" (click)="$event.stopPropagation()">
+                <div class="story-viewers-header">
+                    <h3>Story Views</h3>
+                    <button class="story-close-btn text-dark" (click)="closeStoryViewers()">&times;</button>
+                </div>
+                <div class="story-viewers-list">
+                    <div *ngIf="loadingStoryViewers" class="story-viewers-empty">Loading views...</div>
+                    <div *ngFor="let viewer of storyViewers" class="story-viewer-row">
+                        <img *ngIf="viewer.avatarUrl" [src]="viewer.avatarUrl" [alt]="viewer.username" />
+                        <div *ngIf="!viewer.avatarUrl" class="viewer-fallback">
+                            {{ viewer.username.charAt(0).toUpperCase() }}
+                        </div>
+                        <div class="viewer-meta">
+                            <span class="viewer-name">&#64;{{ viewer.username }}</span>
+                            <span class="viewer-time" *ngIf="viewer.viewedAt">{{ viewer.viewedAt | date:'short' }}</span>
+                        </div>
+                    </div>
+                    <div *ngIf="!loadingStoryViewers && storyViewers.length === 0" class="story-viewers-empty">
+                        No views yet.
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>

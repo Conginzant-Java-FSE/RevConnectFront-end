@@ -96,6 +96,7 @@ export class NotificationsComponent implements OnInit {
       case 'COLLAB_PROMOTION_CONFIRMED': return 'confirmed promotion completion.';
       case 'COLLAB_PROMOTION_POST_CREATED': return 'created a promotion post and tagged you.';
       case 'COLLAB_PAYMENT_DONE': return 'marked collaboration payment as completed.';
+      case 'COLLAB_POST_REQUEST': return 'invited you to collaborate on a post.';
       case 'COLLAB_DIRECT_PROPOSAL_SENT': return 'sent you a direct collaboration request.';
       case 'COLLAB_APPLICATION_ACCEPTED': return 'accepted your collaboration application.';
       case 'COLLAB_APPLICATION_REJECTED': return 'rejected your collaboration application.';

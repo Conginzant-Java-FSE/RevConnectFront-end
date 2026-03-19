@@ -423,6 +423,21 @@
     font: inherit;
 }
 
+.share-search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 9px 10px;
+    font: inherit;
+    margin-top: 6px;
+}
+
+.share-search-input::placeholder {
+    color: var(--text-muted);
+}
+
 .share-note-input {
     resize: vertical;
     min-height: 72px;
